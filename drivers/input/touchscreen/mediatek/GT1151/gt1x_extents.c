@@ -39,17 +39,19 @@
 #include <asm/ioctl.h>
 #include "include/gt1x_tpd_common.h"
 
+extern struct gt1x_version_info gt1x_version;
 #ifdef CONFIG_GTP_GESTURE_WAKEUP
 
 #define GESTURE_NODE "goodix_gesture"
 #define GESTURE_MAX_POINT_COUNT    64
 
+#define GTP_REG_GES_COOR			0x9420
 #pragma pack(1)
-struct {
+struct st_gesture_data{
 	u8 ic_msg[6];		/*from the first byte */
 	u8 gestures[4];
 	u8 data[3 + GESTURE_MAX_POINT_COUNT * 4 + 80];	/*80 bytes for extra data */
-} st_gesture_data;
+};
 #pragma pack()
 
 #define SETBIT(longlong, bit)   (longlong[bit/8] |=  (1 << bit%8))
@@ -60,8 +62,88 @@ int gesture_enabled = 0;
 DOZE_T gesture_doze_status = DOZE_DISABLED;
 
 static u8 gestures_flag[32];
-static st_gesture_data gesture_data;
+static struct st_gesture_data gesture_data;
 static struct mutex gesture_data_mutex;
+static s16 coordinate_x[150];
+static s16 coordinate_y[150];
+static int gpointnum;
+extern int tpd_halt;
+
+static int _is_open_gesture_mode = 0;
+
+static ssize_t gt9xx_gesture_show(struct device *dev,struct device_attribute *attr,char *buf)
+{
+    ssize_t num_read_chars = 0;
+
+    num_read_chars = snprintf(buf, PAGE_SIZE, "%d\n", _is_open_gesture_mode);
+
+    return num_read_chars;
+}
+
+static ssize_t gt9xx_gesture_store(struct device *dev,struct device_attribute *attr,const char *buf, size_t count)
+{
+    if(count == 0)
+        return 0;
+
+    //mt_eint_mask(CUST_EINT_TOUCH_PANEL_NUM);
+
+    if(buf[0] == '1' && _is_open_gesture_mode == 0){
+        _is_open_gesture_mode = 1;
+    }
+    if(buf[0] == '0' && _is_open_gesture_mode == 1){
+        _is_open_gesture_mode = 0;
+    }
+
+    gesture_enabled = _is_open_gesture_mode;
+    //mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
+    return count;
+}
+
+static DEVICE_ATTR(gesture, S_IRUGO|S_IWUSR, gt9xx_gesture_show, gt9xx_gesture_store);
+
+static ssize_t goodix_coordinate_x_show(struct device *dev,struct device_attribute *attr,char *buf)
+{
+    ssize_t num_read_chars = 0, count =0;
+    int i;
+    for (i=0; i< gpointnum; i++)
+    {
+        count = sprintf(buf, "%d ", coordinate_x[i]);
+        buf += count;
+        num_read_chars += count;
+    }
+
+    return num_read_chars;
+}
+
+static DEVICE_ATTR(coordinate_x, S_IRUGO|S_IWUSR, goodix_coordinate_x_show, NULL);
+
+static ssize_t goodix_coordinate_y_show(struct device *dev,struct device_attribute *attr,char *buf)
+{
+    ssize_t num_read_chars = 0, count =0;
+    int i;
+    for (i=0; i< gpointnum; i++)
+    {
+        count = sprintf(buf, "%d ", coordinate_y[i]);
+        buf += count;
+        num_read_chars += count;
+    }
+
+    return num_read_chars;
+}
+
+static DEVICE_ATTR(coordinate_y, S_IRUGO|S_IWUSR, goodix_coordinate_y_show, NULL);
+
+static struct attribute *goodix_attributes[] = {
+    &dev_attr_gesture.attr,
+    &dev_attr_coordinate_x.attr,
+    &dev_attr_coordinate_y.attr,
+    //&dev_attr_fwversion.attr,
+    NULL
+};
+
+static struct attribute_group goodix_attribute_group = {
+    .attrs = goodix_attributes
+};
 
 static ssize_t gt1x_gesture_data_read(struct file *file, char __user *page, size_t size, loff_t *ppos)
 {
@@ -125,7 +207,7 @@ int gesture_enter_doze(void)
 	GTP_ERROR("GTP send doze cmd failed.");
 	return -1;
 }
-
+#if 0
 s32 gesture_event_handler(struct input_dev *dev)
 {
 	u8 doze_buf[4] = { 0 };
@@ -195,6 +277,152 @@ s32 gesture_event_handler(struct input_dev *dev)
 	}
 	return -1;
 }
+#else
+s32 gesture_event_handler(struct input_dev *dev)
+{
+    u8 doze_buf[1] = {0x0};
+    int keyValue;
+    bool isValuedKey;
+    u8 ges_data[4];
+    u16	coor_reg;
+    s32 ret;
+    s16 i;
+    s16 ges_type_reg;
+    s16 ges_touch_point;
+    s16 ges_coor_reg;
+    
+	GTP_INFO("%s line %d gt1x_version.product_id 0x%x\n",__func__,__LINE__,tpd->dev->id.product);
+    if (DOZE_ENABLED == gesture_doze_status && tpd_halt == 1)
+    {
+        if((tpd->dev->id.product == 0x5663) || (tpd->dev->id.product == 0x9176) || (tpd->dev->id.product == 0x5668))
+        {
+            ges_type_reg = 0x814C;
+            ges_touch_point = 0x814D;
+            ges_coor_reg = 0xA2A0;
+        }
+        else
+        {
+            ges_type_reg = 0x814B;
+            ges_touch_point = 0x814C;
+            ges_coor_reg = 0x9420;
+        }
+        
+        ret = gt1x_i2c_read(ges_type_reg, doze_buf, sizeof(doze_buf));
+        GTP_DEBUG("ges_type_reg = 0x%02X", doze_buf[0]);
+        if (!ret)
+        {     
+            GTP_DEBUG("gesture_event_handler %s line %d doze_buf[0] %d\n",__func__,__LINE__,doze_buf[0]);    
+            isValuedKey = true;
+    
+            switch (doze_buf[0]){
+    
+                case 0x63:
+                    keyValue = KEY_C;
+                    break;
+                case 0x65:
+                    keyValue = KEY_E;
+                    break;
+                case 0x6F:
+                    keyValue = KEY_O;
+                    break;
+                case 0x73:
+                    keyValue = KEY_S;
+                    break;
+                case 0x7A:
+                    keyValue = KEY_Z;
+                    break;
+                case 0x76:
+                    keyValue = KEY_V;
+                    break;
+                case 0x77:
+                    keyValue = KEY_W;
+                    break;
+                case 0x6D:
+                    keyValue = KEY_M;
+                    break;
+                case 0xAA:
+                    keyValue = KEY_RIGHT;
+                    break;
+                case 0xBB:
+                    keyValue = KEY_LEFT;
+                    break;
+                case 0xAB:
+                    keyValue = KEY_DOWN;
+                    break;
+                case 0xBA:
+                    keyValue = KEY_UP;
+                    break;
+                case 0xCC:
+                    keyValue = KEY_U;
+                    break;
+                case 0x5E:
+                    keyValue = KEY_U;
+                    break;
+                default:
+                    isValuedKey = false;
+                    break;
+            }
+    
+            if(isValuedKey){
+                GTP_DEBUG("gesture_event_handler %s line %d\n",__func__,__LINE__);
+                /*
+                doze_buf[0] = 0x81;
+                doze_buf[1] = 0x4C;
+                */
+                ret = gt1x_i2c_read(ges_touch_point, doze_buf, sizeof(doze_buf));
+                if(!ret)
+                {							
+                    gpointnum = doze_buf[0];
+                    GTP_DEBUG("gesture_event_handler %s line %d gpointnum %d\n",__func__,__LINE__,gpointnum);
+                    for(i=0; i< gpointnum; i++)
+                    {
+                        coor_reg = ges_coor_reg + i*4;
+                        /*
+                        ges_data[0] = (u8)(coor_reg>>8);
+                        ges_data[1] = (u8)(coor_reg&0xFF);
+                        */
+                        ret = gt1x_i2c_read(coor_reg, ges_data, sizeof(ges_data));
+                        GTP_DEBUG("gesture_event_handler %s line %d ges_data 0x%x 0x%x, 0x%x 0x%x\n",
+                                __func__,__LINE__,ges_data[1],ges_data[0],ges_data[3],ges_data[2]);
+                        if(ret > 0)
+                        {
+                            coordinate_x[i] = ges_data[1]<<8 | ges_data[0];
+                            coordinate_y[i] = ges_data[3]<<8 | ges_data[2];
+                        }
+                    }
+                }
+    
+                /**
+                * Commented the following statement, or the doze state will
+                * be messed up when the key is valid, but not supported by
+                * UI;
+                */
+                /* doze_status = DOZE_WAKEUP; */
+    
+                // clear 0x814B
+                doze_buf[0] = 0x00;
+                gt1x_i2c_write(ges_type_reg, doze_buf, 1);
+                //gtp_enter_doze(i2c_client_point);
+    
+                input_report_key(tpd->dev, keyValue, 1);
+                input_sync(tpd->dev);
+                input_report_key(tpd->dev, keyValue, 0);
+                input_sync(tpd->dev);					
+            }
+            else{
+                GTP_DEBUG("gesture_event_handler %s line %d\n",__func__,__LINE__);
+                // clear 0x814B
+                doze_buf[0] = 0x00;
+                gt1x_i2c_write(ges_type_reg, doze_buf, 1);
+                gesture_enter_doze();
+            }
+            return 1;
+        }        
+        return 0;
+    }
+    return -1;
+}
+#endif
 
 void gesture_clear_wakeup_data(void)
 {
@@ -554,10 +782,6 @@ static s32 io_iic_write(u8 *data)
 	s32 data_length = 0;
 	u16 addr = 0;
 
-	if (data == NULL) {
-		GTP_ERROR("data is null\n");
-		return -1;
-	}
 	addr = data[0] << 8 | data[1];
 	data_length = data[2] << 8 | data[3];
 
@@ -578,17 +802,12 @@ static long gt1x_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	u32 value = 0;
 	s32 ret = 0;		/*the initial value must be 0*/
 	u8 *data = NULL;
-	int cnt = 30;
 	static struct ratelimit_state ratelimit = {
 		.lock = __RAW_SPIN_LOCK_UNLOCKED(ratelimit.lock),
 		.interval = HZ/2,
 		.burst = 1,
 		.begin = 1,
 	};
-
-    /* Blocking when firmwaer updating */
-	while (cnt-- && update_info.status)
-		ssleep(1);
 
 	GTP_DEBUG("IOCTL CMD:%x", cmd);
 	/*GTP_DEBUG("command:%d, length:%d, rw:%s", _IOC_NR(cmd), _IOC_SIZE(cmd),
@@ -628,10 +847,7 @@ static long gt1x_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				GTP_ERROR("touch is suspended.");
 			break;
 		}
-		if (data != NULL)
-			ret = io_iic_read(data, (void __user *)arg);
-		else
-			GTP_ERROR("Touch read data is NULL.");
+		ret = io_iic_read(data, (void __user *)arg);
 		break;
 
 	case IO_IIC_WRITE:
@@ -640,10 +856,7 @@ static long gt1x_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				GTP_ERROR("touch is suspended.");
 			break;
 		}
-		if (data != NULL)
-			ret = io_iic_write(data);
-		else
-			GTP_ERROR("Touch write data is NULL.");
+		ret = io_iic_write(data);
 		break;
 
 	case IO_RESET_GUITAR:
@@ -953,7 +1166,7 @@ s32 gt1x_init_node(void)
 
 	mutex_init(&gesture_data_mutex);
 	memset(gestures_flag, 0, sizeof(gestures_flag));
-	memset((u8 *) &gesture_data, 0, sizeof(st_gesture_data));
+	memset((u8 *) &gesture_data, 0, sizeof(gesture_data));
 
 	proc_entry = proc_create(GESTURE_NODE, 0666, NULL, &gt1x_fops);
 	if (proc_entry == NULL) {
@@ -961,6 +1174,10 @@ s32 gt1x_init_node(void)
 		return -1;
 	}
 	GTP_INFO("Create proc entry[GESTURE_NODE] success!");
+	if (sysfs_create_group(&gt1x_i2c_client->dev.kobj, &goodix_attribute_group)) {
+		GTP_ERROR("create attr fail\n");
+		return -1;
+	}
 #endif
 
 #ifdef CONFIG_GTP_HOTKNOT
@@ -983,4 +1200,3 @@ void gt1x_deinit_node(void)
 	misc_deregister(&hotknot_misc_device);
 #endif
 }
-MODULE_LICENSE("GPL");

@@ -32,29 +32,22 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 
-#include <linux/suspend.h>
-
 /*1 enable,0 disable,touch_panel_eint default status, need to confirm after register eint*/
 int irq_flag = 1;
 static spinlock_t irq_flag_lock;
 /*0 power off,default, 1 power on*/
 static int power_flag;
 static int tpd_flag;
-static int tpd_pm_flag;
-static int tpd_tui_flag;
-static int tpd_tui_low_power_skipped;
-DEFINE_MUTEX(tui_lock);
+
 int tpd_halt = 0;
 static int tpd_eint_mode = 1;
 static struct task_struct *thread;
-static struct task_struct *update_thread;
+
 static struct task_struct *probe_thread;
-static struct notifier_block pm_notifier_block;
+
 static int tpd_polling_time = 50;
 static DECLARE_WAIT_QUEUE_HEAD(waiter);
-static DECLARE_WAIT_QUEUE_HEAD(pm_waiter);
 static bool gtp_suspend;
-
 DECLARE_WAIT_QUEUE_HEAD(init_waiter);
 DEFINE_MUTEX(i2c_access);
 unsigned int touch_irq = 0;
@@ -69,6 +62,10 @@ static int tpd_wb_end_local[TPD_WARP_CNT] = TPD_WARP_END;
 static int tpd_def_calmat_local[8] = TPD_CALIBRATION_MATRIX;
 #endif
 
+#ifdef CONFIG_GTP_GESTURE_WAKEUP
+static int tpd_gestrue_keys[] = {KEY_RIGHT,KEY_LEFT,KEY_UP,KEY_DOWN,KEY_U,KEY_O,KEY_W,KEY_M,KEY_E,KEY_C,KEY_Z,KEY_S,KEY_V};
+#define TPD_GESTRUE_KEY_CNT	(sizeof( tpd_gestrue_keys )/sizeof( tpd_gestrue_keys[0] ))
+#endif
 static int tpd_event_handler(void *unused);
 static int tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id);
 static int tpd_i2c_detect(struct i2c_client *client, struct i2c_board_info *info);
@@ -354,7 +351,7 @@ static struct device_attribute *gt9xx_attrs[] = {
 
 static int tpd_i2c_detect(struct i2c_client *client, struct i2c_board_info *info)
 {
-	strncpy(info->type, "mtk-tpd", sizeof(info->type));
+	strcpy(info->type, "mtk-tpd");
 	return 0;
 }
 
@@ -418,7 +415,9 @@ void gt1x_irq_disable(void)
 void gt1x_power_switch(s32 state)
 {
 #if !defined(CONFIG_MTK_LEGACY) || defined(CONFIG_ARCH_MT6580)
+#ifdef CONFIG_TPD_POWER_SOURCE_VIA_VGP
 	int ret = 0;
+#endif    
 #endif
 
 	GTP_GPIO_OUTPUT(GTP_RST_PORT, 0);
@@ -430,9 +429,15 @@ void gt1x_power_switch(s32 state)
 		if (power_flag == 0) {
 			GTP_DEBUG("Power switch on!");
 #if !defined(CONFIG_MTK_LEGACY)
+        #ifdef CONFIG_TPD_POWER_SOURCE_VIA_VGP
 			ret = regulator_enable(tpd->reg);	/*enable regulator*/
 			if (ret)
 				GTP_ERROR("regulator_enable() failed!\n");
+        #endif
+/* Vanzo:yuntaohe on: Tue, 12 Jan 2016 16:33:20 +0800
+ */
+            tpd_ldo_power_enable(1);
+// End of Vanzo:yuntaohe
 #else
 #ifdef TPD_POWER_SOURCE_CUSTOM
 #ifdef CONFIG_ARCH_MT6580
@@ -456,9 +461,15 @@ void gt1x_power_switch(s32 state)
 		if (power_flag == 1) {
 			GTP_DEBUG("Power switch off!");
 #if !defined(CONFIG_MTK_LEGACY)
+        #ifdef CONFIG_TPD_POWER_SOURCE_VIA_VGP
 			ret = regulator_disable(tpd->reg);	/*disable regulator*/
 			if (ret)
 				GTP_ERROR("regulator_disable() failed!\n");
+        #endif
+/* Vanzo:yuntaohe on: Tue, 12 Jan 2016 16:33:20 +0800
+ */
+            tpd_ldo_power_enable(0);
+// End of Vanzo:yuntaohe
 #else
 #ifdef TPD_POWER_SOURCE_CUSTOM
 #ifdef CONFIG_ARCH_MT6580
@@ -526,54 +537,35 @@ static int tpd_irq_registration(void)
 	return ret;
 }
 
-void gt1x_auto_update_done(void)
+static u16 convert_productname(u8 *name)
 {
-	tpd_pm_flag = 1;
-	wake_up_interruptible(&pm_waiter);
-}
-#if CONFIG_GTP_AUTO_UPDATE
-int gt1x_pm_notifier(struct notifier_block *nb, unsigned long val, void *ign)
-{
-	switch (val) {
-	case PM_RESTORE_PREPARE:
-		pr_err("%s: PM_RESTORE_PREPARE enter\n", __func__);
-		if (!IS_ERR(update_thread) && update_thread) {
-			wait_event_interruptible(waiter, tpd_pm_flag == 1);
-			/* pr_err("%s: stoping update thread(%d)", __FUNCTION__, kthread_stop(update_thread)); */
-		}
-		pr_err("%s: PM_RESTORE_PREPARE leave\n", __func__);
-		return NOTIFY_DONE;
+	//int i;
+	u16 product = 0;
+    /*
+	for (i = 0; i < 4; i++) {
+		product <<= 4;
+		if (name[i] < '0' || name[i] > '9')
+			product += '*';
+		else
+			product += name[i] - '0';
 	}
-	return NOTIFY_OK;
-}
-#endif
-
-int tpd_reregister_from_tui(void)
-{
-	int ret = 0;
-
-	free_irq(touch_irq, NULL);
-
-	ret = tpd_irq_registration();
-	if (ret < 0) {
-		ret = -1;
-	    GTP_ERROR("tpd request_irq IRQ LINE NOT AVAILABLE!.");
-	}
-	return ret;
+    */
+    product = ((name[0]&0x0F)<<12 | (name[1]&0x0F)<<8 |(name[2]&0x0F)<<4 |(name[3]&0x0F));
+	return product;
 }
 
 static int tpd_registration(void *client)
 {
 	s32 err = 0;
 	s32 idx = 0;
-
+    s16 i;
+    
 	gt1x_i2c_client = client;
 
 	if (gt1x_init()) {
 		/* TP resolution == LCD resolution, no need to match resolution when initialized fail */
 		gt1x_abs_x_max = 0;
 		gt1x_abs_y_max = 0;
-		return 0;
 	}
 
 	thread = kthread_run(tpd_event_handler, 0, TPD_DEVICE);
@@ -588,6 +580,13 @@ static int tpd_registration(void *client)
 
 #ifdef CONFIG_GTP_GESTURE_WAKEUP
 	input_set_capability(tpd->dev, EV_KEY, KEY_GESTURE);
+    
+    input_set_capability(tpd->dev, EV_KEY, KEY_POWER);
+
+    for(i=0; i<TPD_GESTRUE_KEY_CNT; i++)
+    {
+        input_set_capability(tpd->dev, EV_KEY, tpd_gestrue_keys[i]);
+    }    
 #endif
 
 	GTP_GPIO_AS_INT(GTP_INT_PORT);
@@ -604,15 +603,18 @@ static int tpd_registration(void *client)
 
 #ifdef CONFIG_GTP_AUTO_UPDATE
 
-	update_thread = kthread_run(gt1x_auto_update_proc, (void *)NULL, "gt1x_auto_update");
-	if (IS_ERR(update_thread)) {
-		err = PTR_ERR(update_thread);
+	thread = kthread_run(gt1x_auto_update_proc, (void *)NULL, "gt1x_auto_update");
+	if (IS_ERR(thread)) {
+		err = PTR_ERR(thread);
 		GTP_INFO(TPD_DEVICE " failed to create auto-update thread: %d\n", err);
 	}
-	pm_notifier_block.notifier_call = gt1x_pm_notifier;
-	pm_notifier_block.priority = 0;
-	register_pm_notifier(&pm_notifier_block);
 #endif
+
+	/*set vendor string*/
+	tpd->dev->id.vendor = 0x00;
+	tpd->dev->id.product = convert_productname(gt1x_version.product_id);
+	tpd->dev->id.version = (gt1x_version.patch_id >> 8);
+    GTP_INFO("end %s, %d product 0x%x, version %d\n", __func__, __LINE__,tpd->dev->id.product, tpd->dev->id.version);
 	return 0;
 }
 
@@ -632,14 +634,26 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 		GTP_INFO(TPD_DEVICE " failed to create probe thread: %d\n", err);
 		return err;
 	}
-
-	err = wait_event_interruptible_timeout(init_waiter, check_flag == true, 5 * HZ);
-	if (err <= 0)
-		GTP_ERROR("init_waiter fail, err=%d\n", err);
-
-	GTP_INFO("tpd_i2c_probe end.wait_event_interruptible, err=%d, flag=%d, tpd_load_status=%d\n",
-				err, check_flag, tpd_load_status);
-
+	GTP_INFO("tpd_i2c_probe start.wait_event_interruptible");
+	wait_event_interruptible_timeout(init_waiter, check_flag == true, 5 * HZ);
+	GTP_INFO("tpd_i2c_probe end.wait_event_interruptible");
+/*
+	do {
+		GTP_INFO("ZH tpd_i2c_probe A count = %d", count);
+		msleep(20);
+		GTP_INFO("ZH tpd_i2c_probe B count = %d", count);
+		count++;
+		if (check_flag == true)
+			break;
+	} while (count < 300);
+	GTP_INFO("tpd_i2c_probe done.count = %d, flag = %d", count, tpd_load_status);
+*/
+#ifdef VANZO_DEVICE_NAME_SUPPORT
+{
+    extern void v_set_dev_name(int id, char *name);
+    v_set_dev_name(2, "Goodix");
+}
+#endif
 	return 0;
 }
 
@@ -928,21 +942,6 @@ int gt1x_debug_proc(u8 *buf, int count)
 	return -1;
 }
 
-static u16 convert_productname(u8 *name)
-{
-	int i;
-	u16 product = 0;
-
-	for (i = 0; i < 4; i++) {
-		product <<= 4;
-		if (name[i] < '0' || name[i] > '9')
-			product += '*';
-		else
-			product += name[i] - '0';
-	}
-	return product;
-}
-
 static int tpd_i2c_remove(struct i2c_client *client)
 {
 	gt1x_deinit();
@@ -953,6 +952,7 @@ static int tpd_i2c_remove(struct i2c_client *client)
 static int tpd_local_init(void)
 {
 #if !defined CONFIG_MTK_LEGACY
+#ifdef CONFIG_TPD_POWER_SOURCE_VIA_VGP
 	int ret;
 
 	GTP_INFO("Device Tree get regulator!");
@@ -962,6 +962,7 @@ static int tpd_local_init(void)
 		GTP_ERROR("regulator_set_voltage(%d) failed!\n", ret);
 		return -1;
 	}
+#endif    
 #endif
 #ifdef TPD_POWER_SOURCE_CUSTOM
 #ifdef CONFIG_ARCH_MT6580
@@ -1007,13 +1008,7 @@ static int tpd_local_init(void)
 	memcpy(tpd_calmat, tpd_def_calmat_local, 8 * 4);
 	memcpy(tpd_def_calmat, tpd_def_calmat_local, 8 * 4);
 #endif
-
-	/*set vendor string*/
-	tpd->dev->id.vendor = 0x00;
-	tpd->dev->id.product = convert_productname(gt1x_version.product_id);
-	tpd->dev->id.version = (gt1x_version.patch_id >> 8);
-
-	GTP_INFO("end %s, %d\n", __func__, __LINE__);
+	
 	tpd_type_cap = 1;
 	return 0;
 }
@@ -1027,18 +1022,7 @@ static void tpd_suspend(struct device *h)
 	u8 buf[1] = { 0 };
 #endif
 #endif
-	if (is_resetting || update_info.status)
-		return;
 	GTP_INFO("TPD suspend start...");
-
-	mutex_lock(&tui_lock);
-	if (tpd_tui_flag) {
-		GTP_INFO("[TPD] skip tpd_suspend due to TUI in used\n");
-		tpd_tui_low_power_skipped = 1;
-		mutex_unlock(&tui_lock);
-		return;
-	}
-	mutex_unlock(&tui_lock);
 
 #ifdef CONFIG_GTP_PROXIMITY
 	if (gt1x_proximity_flag == 1) {
@@ -1099,8 +1083,6 @@ static void tpd_suspend(struct device *h)
 static void tpd_resume(struct device *h)
 {
 	s32 ret = -1;
-	if (is_resetting || update_info.status)
-		return;
 
 	GTP_INFO("TPD resume start...");
 	gtp_suspend = false;
@@ -1161,38 +1143,6 @@ void tpd_off(void)
 	gt1x_irq_disable();
 }
 
-int tpd_enter_tui(void)
-{
-	int ret = 0;
-
-	tpd_tui_flag = 1;
-	mt_eint_set_deint(10, 187);
-	GTP_INFO("[%s] enter tui", __func__);
-	return ret;
-}
-
-int tpd_exit_tui(void)
-{
-	int ret = 0;
-
-	GTP_INFO("[%s] exit TUI+", __func__);
-	mutex_lock(&tui_lock);
-	tpd_tui_flag = 0;
-	mutex_unlock(&tui_lock);
-	if (tpd_tui_low_power_skipped) {
-		tpd_tui_low_power_skipped = 0;
-		GTP_INFO("[%s] do low power again+", __func__);
-		tpd_suspend(NULL);
-		GTP_INFO("[%s] do low power again-", __func__);
-	}
-
-	mt_eint_clr_deint(10);
-	tpd_reregister_from_tui();
-
-	GTP_INFO("[%s] exit TUI-", __func__);
-	return ret;
-}
-
 void tpd_on(void)
 {
 	s32 ret = -1, retry = 0;
@@ -1230,4 +1180,3 @@ static void __exit tpd_driver_exit(void)
 
 module_init(tpd_driver_init);
 module_exit(tpd_driver_exit);
-MODULE_LICENSE("GPL");

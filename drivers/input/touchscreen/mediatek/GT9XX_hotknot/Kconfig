@@ -1,18 +1,18 @@
 #
 # Touchscreen driver configuration
 #
-if TOUCHSCREEN_MTK_GT9XX_HOTKNOT
+if TOUCHSCREEN_MTK_GT9XXTB_HOTKNOT
 
-config GT9XX_FIRMWARE
-	string "GT9XX_hotknot for Mediatek firmware"
+config GT9XXTB_FIRMWARE
+	string "GT9XXTB_hotknot for Mediatek firmware"
 
-config GT9XX_CONFIG
-	string "GT9XX_hotknot for Mediatek config"
+config GT9XXTB_CONFIG
+	string "GT9XXTB_hotknot for Mediatek config"
 config GTP_DBL_CLK_WAKEUP
 	bool "GTP_DBL_CLK_WAKEUP"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -23,7 +23,7 @@ config GTP_DEBUG_FUNC_ON
 	bool "GTP_DEBUG_FUNC_ON"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -34,7 +34,7 @@ config GTP_DEBUG_ARRAY_ON
 	bool "GTP_DEBUG_ARRAY_ON"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -45,7 +45,7 @@ config GTP_DEBUG_ON
 	bool "GTP_DEBUG_ON"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -56,7 +56,7 @@ config TPD_PROXIMITY
 	bool "TPD_PROXIMITY"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -67,7 +67,7 @@ config GTP_WITH_PEN
 	bool "GTP_WITH_PEN"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -78,7 +78,7 @@ config GTP_CHARGER_DETECT
 	bool "GTP_CHARGER_DETECT"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -89,7 +89,7 @@ config GTP_FW_DOWNLOAD
 	bool "GTP_FW_DOWNLOAD"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -100,7 +100,7 @@ config GUP_USE_HEADER_FILE
 	bool "GUP_USE_HEADER_FILE"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -111,7 +111,7 @@ config GTP_AUTO_UPDATE_CFG
 	bool "GTP_AUTO_UPDATE_CFG"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -122,7 +122,7 @@ config GTP_HEADER_FW_UPDATE
 	bool "GTP_HEADER_FW_UPDATE"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -133,7 +133,7 @@ config GTP_AUTO_UPDATE
 	bool "GTP_AUTO_UPDATE"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -144,7 +144,7 @@ config GTP_POWER_CTRL_SLEEP
 	bool "GTP_POWER_CTRL_SLEEP"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -155,7 +155,7 @@ config GTP_DRIVER_SEND_CFG
 	bool "GTP_DRIVER_SEND_CFG"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -166,7 +166,7 @@ config GTP_CUSTOM_CFG
 	bool "GTP_CUSTOM_CFG"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -177,7 +177,7 @@ config GTP_COMPATIBLE_MODE
 	bool "GTP_COMPATIBLE_MODE"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -188,7 +188,7 @@ config HOTKNOT_BLOCK_RW
 	bool "HOTKNOT_BLOCK_RW"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -199,7 +199,7 @@ config GTP_ESD_PROTECT
 	bool "GTP_ESD_PROTECT"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -210,7 +210,7 @@ config GTP_CREATE_WR_NODE
 	bool "GTP_CREATE_WR_NODE"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -221,7 +221,7 @@ config GTP_CHARGER_SWITCH
 	bool "GTP_CHARGER_SWITCH"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -232,7 +232,7 @@ config GTP_SUPPORT_I2C_DMA
 	bool "GTP_SUPPORT_I2C_DMA"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 
@@ -243,7 +243,7 @@ config GTP_SLIDE_WAKEUP
 	bool "GTP_SLIDE_WAKEUP"
 	default n
 	help
-	Say Y here if you have GT9XX_hotknot touch panel GTP_DEBUG_FUNC_ON.
+	Say Y here if you have GT9XXTB_hotknot touch panel GTP_DEBUG_FUNC_ON.
 
 	If unsure, say N.
 

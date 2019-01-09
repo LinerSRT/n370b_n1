@@ -50,14 +50,14 @@
 		reg = <0x68>;
 	};
 
-	gsensor@18 {
+	gsensor@4c {
 		compatible = "mediatek,gsensor";
-		reg = <0x18>;
+		reg = <0x4c>;
 	};
 
-	alsps@49 {
+	alsps@60 {
 		compatible = "mediatek,alsps";
-		reg = <0x49>;
+		reg = <0x60>;
 	};
 
 	nfc@28 {
@@ -70,3 +70,12 @@
 		reg = <0x63>;
 	};
 };
+
+&i2c3 {
+	ext_buck@6b {
+		compatible = "mediatek,ext_buck";
+		reg = <0x6b>;
+	};
+
+};
+

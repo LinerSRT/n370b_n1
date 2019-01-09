@@ -20,6 +20,7 @@
  */
 
 #include <linux/input.h>
+
 #include "include/gt1x_tpd_common.h"
 #include "gt1x_config.h"
 
@@ -990,7 +991,7 @@ void gt1x_power_reset(void)
 	s32 i = 0;
 	s32 ret = 0;
 
-	if (is_resetting || update_info.status)
+	if (is_resetting)
 		return;
 	GTP_INFO("force_reset_guitar");
 	is_resetting = 1;
@@ -1050,12 +1051,10 @@ s32 gt1x_request_event_handler(void)
 	case GTP_RQST_MAIN_CLOCK:
 		GTP_INFO("Request main clock.");
 		break;
-#if 0
 #ifdef CONFIG_GTP_HOTKNOT
 	case GTP_RQST_HOTKNOT_CODE:
 		GTP_INFO("Request HotKnot Code.");
 		break;
-#endif
 #endif
 	default:
 		break;
@@ -1173,12 +1172,41 @@ s32 gt1x_touch_event_handler(u8 *data, struct input_dev *dev, struct input_dev *
 #endif
 	if (tpd_dts_data.use_tpd_button) {
 		if (CHK_BIT(cur_event, BIT_TOUCH_KEY) || CHK_BIT(pre_event, BIT_TOUCH_KEY)) {
+/* Vanzo:liuqiang on: Sat, 24 Sep 2016 16:01:24 +0800
 			for (i = 0; i < tpd_dts_data.tpd_key_num; i++)
 				input_report_key(dev, tpd_dts_data.tpd_key_local[i], key_value & (0x01 << i));
+ */
+            switch(key_value)
+            {
+                case 0:
+                    input_x = 0;
+                    input_y = 0;                    
+                    break;
+                case 1:
+                    input_x = tpd_dts_data.tpd_key_dim_local[0].key_x;
+                    input_y = tpd_dts_data.tpd_key_dim_local[0].key_y;
+                    break;
+                case 2:
+                    input_x = tpd_dts_data.tpd_key_dim_local[1].key_x;
+                    input_y = tpd_dts_data.tpd_key_dim_local[1].key_y;                
+                    break;
+                case 4:
+                    input_x = tpd_dts_data.tpd_key_dim_local[2].key_x;
+                    input_y = tpd_dts_data.tpd_key_dim_local[2].key_y;                
+                    break;
+            }
+            
 			if (CHK_BIT(cur_event, BIT_TOUCH_KEY))
-				GTP_DEBUG("Key Down.");
+            {
+				printk(KERN_ERR "Key Down.");                
+                gt1x_touch_down(input_x, input_y, 0, 0);
+            }
 			else
-				GTP_DEBUG("Key Up.");
+            {
+				printk(KERN_ERR "Key Up.");
+                gt1x_touch_up(0);
+            }
+// End of Vanzo:liuqiang
 		}
 	}
 
@@ -1729,7 +1757,6 @@ s32 gt1x_init(void)
 		gt1x_abs_y_max = tpd_dts_data.tpd_resolution[1];
 		gt1x_int_type = GTP_INT_TRIGGER;
 		gt1x_wakeup_level = GTP_WAKEUP_LEVEL;
-		return ret;
 	}
 
 	gt1x_workqueue = create_singlethread_workqueue("gt1x_workthread");
@@ -1781,4 +1808,3 @@ void gt1x_deinit(void)
 	if (gt1x_workqueue)
 		destroy_workqueue(gt1x_workqueue);
 }
-MODULE_LICENSE("GPL");

@@ -1,33 +1,3 @@
-/* drivers/input/touchscreen/gt9xx_driver.c
- *
- * 2010 - 2012 Goodix Technology.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be a reference
- * to you, when you are integrating the GOODiX's CTP IC into your system,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * Version:1.6
- * Revision Record:
- *      V1.0:  first release. by Andrew, 2012/08/27.
- *      V1.2:  modify gt9110p pid map, by Andrew, 2012/10/15
- *      V1.4:
- *          1. modify gup_enter_update_mode,
- *          2. rewrite i2c read/write func
- *          3. check update file checksum
- *                  by Andrew, 2012/12/12
- *      v1.6:
- *          1. delete GTP_FW_DOWNLOAD related things.
- *          2. add GTP_DEF_FW_UPDATE switch to update fw by gtp_default_fw in *.h directly
- *                  by Meta, 2013/04/18
- */
-
 #include "tpd.h"
 #define GUP_FW_INFO
 #include "tpd_custom_gt9xx.h"
@@ -1212,8 +1182,7 @@ static u8 gtp_bak_ref_proc(struct i2c_client *client, u8 mode)
 	/* check file-system mounted */
 	GTP_DEBUG("[gtp_bak_ref_proc]Waiting for FS %d", gtp_ref_retries);
 	if (gup_check_fs_mounted("/data") == FAIL) {
-		if ((gtp_ref_retries % 10) == 0)
-			GTP_DEBUG("[gtp_bak_ref_proc]/data not mounted");
+		GTP_DEBUG("[gtp_bak_ref_proc]/data not mounted");
 		if (gtp_ref_retries++ < GTP_CHK_FS_MNT_MAX)
 			return FAIL;
 	} else {
@@ -1252,7 +1221,7 @@ static u8 gtp_bak_ref_proc(struct i2c_client *client, u8 mode)
 
 	/* get ref file data */
 	flp = filp_open(GTP_BAK_REF_PATH, O_RDWR | O_CREAT, 0660);
-	if (flp ==  NULL || IS_ERR(flp)) {
+	if (IS_ERR(flp)) {
 		GTP_ERROR("[gtp_bak_ref_proc]Ref File not found!Creat ref file.");
 		/* flp->f_op->llseek(flp, 0, SEEK_SET); */
 		/* flp->f_op->write(flp, (char *)refp, ref_len, &flp->f_pos); */
@@ -1268,10 +1237,6 @@ static u8 gtp_bak_ref_proc(struct i2c_client *client, u8 mode)
 		}
 	}
 
-	if (flp && !IS_ERR(flp)) {
-		filp_close(flp, NULL);
-		flp = NULL;
-	}
 	if (GTP_BAK_REF_STORE == mode) {
 		ret = i2c_read_bytes(client, 0x99D0, refp, ref_len);
 		if (-1 == ret) {
@@ -1279,11 +1244,8 @@ static u8 gtp_bak_ref_proc(struct i2c_client *client, u8 mode)
 			ret = FAIL;
 			goto exit_ref_proc;
 		}
-		flp = filp_open(GTP_BAK_REF_PATH, O_RDWR | O_CREAT, 0660);
-		if (flp && !IS_ERR(flp)) {
-			flp->f_op->llseek(flp, 0, SEEK_SET);
-			flp->f_op->write(flp, (char *)refp, ref_len, &flp->f_pos);
-		}
+		flp->f_op->llseek(flp, 0, SEEK_SET);
+		flp->f_op->write(flp, (char *)refp, ref_len, &flp->f_pos);
 	} else {
 		/* checksum ref file */
 		for (j = 0; j < ref_grps; ++j) {
@@ -1322,10 +1284,8 @@ static u8 gtp_bak_ref_proc(struct i2c_client *client, u8 mode)
 
 exit_ref_proc:
 	kfree(refp);
-	if (flp && !IS_ERR(flp)) {
+	if (!IS_ERR(flp))
 		filp_close(flp, NULL);
-		flp = NULL;
-	}
 	return ret;
 }
 
@@ -1386,8 +1346,7 @@ static u8 gtp_check_clk_legality(void)
 		GTP_INFO("Clk ram legality check success");
 		return SUCCESS;
 	}
-	if ((gtp_clk_retries % 10) == 0)
-		GTP_ERROR("main clock freq in clock buf is wrong");
+	GTP_ERROR("main clock freq in clock buf is wrong");
 	return FAIL;
 }
 
@@ -1406,15 +1365,14 @@ static u8 gtp_main_clk_proc(struct i2c_client *client)
 
 	GTP_DEBUG("[gtp_main_clk_proc]Waiting for FS %d", gtp_ref_retries);
 	if (gup_check_fs_mounted("/data") == FAIL) {
-		if ((gtp_clk_retries % 10) == 0)
-			GTP_DEBUG("[gtp_main_clk_proc]/data not mounted");
+		GTP_DEBUG("[gtp_main_clk_proc]/data not mounted");
 		if (gtp_clk_retries++ < GTP_CHK_FS_MNT_MAX)
 			return FAIL;
 		GTP_ERROR("[gtp_main_clk_proc]Wait for file system timeout,need cal clk");
 	} else {
 		GTP_DEBUG("[gtp_main_clk_proc]/data mounted !!!!");
 		flp = filp_open(GTP_MAIN_CLK_PATH, O_RDWR | O_CREAT, 0660);
-		if (!IS_ERR(flp) && (flp != NULL)) {
+		if (!IS_ERR(flp)) {
 			flp->f_op->llseek(flp, 0, SEEK_SET);
 			ret = flp->f_op->read(flp, (char *)gtp_clk_buf, 6, &flp->f_pos);
 			if (ret > 0) {
@@ -1424,9 +1382,6 @@ static u8 gtp_main_clk_proc(struct i2c_client *client)
 					    ("[gtp_main_clk_proc]Open & read & check clk file success.");
 					goto send_main_clk;
 				}
-			} else {
-				filp_close(flp, NULL);
-				flp = NULL;
 			}
 		}
 		GTP_ERROR("[gtp_main_clk_proc]Check clk file failed,need cal clk");
@@ -1456,17 +1411,14 @@ static u8 gtp_main_clk_proc(struct i2c_client *client)
 	}
 	gtp_clk_buf[5] = 0 - clk_chksum;
 
-	flp = filp_open(GTP_MAIN_CLK_PATH, O_RDWR | O_CREAT, 0660);
-	if (!IS_ERR(flp) && (flp != NULL)) {
+	if (IS_ERR(flp)) {
+		flp = filp_open(GTP_MAIN_CLK_PATH, O_RDWR | O_CREAT, 0660);
+	} else {
 		flp->f_op->llseek(flp, 0, SEEK_SET);
 		flp->f_op->write(flp, (char *)gtp_clk_buf, 6, &flp->f_pos);
 	}
 
 send_main_clk:
-	if (flp && !IS_ERR(flp)) {
-		filp_close(flp, NULL);
-		flp = NULL;
-	}
 
 	ret = i2c_write_bytes(client, 0x8020, gtp_clk_buf, 6);
 	if (-1 == ret) {
@@ -1474,14 +1426,15 @@ send_main_clk:
 		ret = FAIL;
 		goto exit_clk_proc;
 	}
+	if (flp && !IS_ERR(flp))
+		filp_close(flp, NULL);
 
 	ret = SUCCESS;
-	return ret;
+	return SUCCESS;
 exit_clk_proc:
 
 	if (flp && !IS_ERR(flp)) {	/* RMT add */
 		filp_close(flp, NULL);
-		flp = NULL;
 	}
 	return ret;
 }
@@ -1879,7 +1832,7 @@ static void tpd_calibrate_driver(int *x, int *y)
 
 static int touch_event_handler(void *unused)
 {
-	struct sched_param param = {.sched_priority = 4 };
+	struct sched_param param = {.sched_priority = RTPM_PRIO_TPD };
 	u8 end_cmd[3] = { GTP_READ_COOR_ADDR >> 8, GTP_READ_COOR_ADDR & 0xFF, 0 };
 	u8 point_data[2 + 1 + 8 * GTP_MAX_TOUCH + 1] = { GTP_READ_COOR_ADDR >> 8,
 		GTP_READ_COOR_ADDR & 0xFF
@@ -1946,8 +1899,7 @@ static int touch_event_handler(void *unused)
 			}
 			switch (rqst_data[2] & 0x0F) {
 			case GTP_RQST_BAK_REF:
-				if ((gtp_ref_retries % 10) == 0)
-					GTP_INFO("Request Ref.");
+				GTP_INFO("Request Ref.");
 				ret = gtp_bak_ref_proc(i2c_client_point, GTP_BAK_REF_SEND);
 				if (SUCCESS == ret) {
 					GTP_INFO("Send ref success.");
@@ -1967,8 +1919,7 @@ static int touch_event_handler(void *unused)
 				}
 				goto exit_work_func;
 			case GTP_RQST_MAIN_CLOCK:
-				if ((gtp_clk_retries % 10) == 0)
-					GTP_INFO("Request main clock.");
+				GTP_INFO("Request main clock.");
 				rqst_processing = 1;
 				ret = gtp_main_clk_proc(i2c_client_point);
 				if (SUCCESS == ret) {

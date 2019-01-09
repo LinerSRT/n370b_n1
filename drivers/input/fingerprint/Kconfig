@@ -1,43 +1,62 @@
 #
 #Fingerprint
 #
-menu "Fingerprint support"
-	depends on INPUT
+menu "Finger support"
+	depends on !UML
 
-config MTK_FINGERPRINT_SUPPORT
-	bool "Mediatek Fingerprint"
+config MTK_FINGERPRINT
+	tristate "Mediatek Fingerprint"
 	default n
 	---help---
 	Fingerprint mtk driver enable/disable in the kernel.
 	Say Y here if you want to use mediatek fingerprint driver,
-	fingerprint driver will support fingerprint function
+	fingerprint driver will support fingerprint function in REE,
+	it supports FPC's 102x/104x device.
 
-if MTK_FINGERPRINT_SUPPORT
-config MTK_FINGERPRINT_SELECT
-	string "sensor type"
-	default "GF318M"
+if MTK_FINGERPRINT
 
-
-if MTK_FINGERPRINT_SELECT = "FPC1145"
 config FPC_FINGERPRINT
-	bool "FPC Fingerprint"
-	default y
+	tristate "FPC Fingerprint"
+	default n
 	---help---
 	FPC fingerprint FPC's 102x/104x device.
-endif
 
-if MTK_FINGERPRINT_SELECT = "GF318M"
-config GOODIX_FINGERPRINT
-	bool "Goodix Fingerprint"
-	default y
+config FINGERPRINT_GOODIX_GF_TEE
+	tristate "Goodix Fingerprint"
+	default n
 	---help---
-	Goodix Fingerprint chip GF316M/GF318M/GF3118M/GF518M/GF5118M/GF516M/GF816M/GF3208/GF5216 TEE driver
+	Goodix Fingerprint chip GF516/GF318GF316M/GF616M/GF318M TEE driver
 
-config GOODIX_SENSOR_TYPE
-	string "SENSOR_TYPE"
-	default "GF318M"
+config FINGERPRINT_GOODIX_FP
+	tristate "goodix Fingerprint"
+	default n
 	---help---
-	Must input sensor type, or default is GF316M GF318M GF3118M GF518M GF5118M GF516M GF816M GF3208 GF5216
-endif
+	Goodix Fingerprint chip GF516/GF318GF316M/GF616M/GF318M  no tee driver
+config FINGERPRINT_MICROARRAY_FP
+	tristate "microarray Fingerprint"
+	default n    
+config FINGERPRINT_GT368
+	tristate "goodix gx368 Fingerprint"
+	default n    
+	
+config FINGERPRINT_GT556
+	tristate "goodix gx556 Fingerprint"
+	default n
+
+config FINGERPRINT_GT368_OTP
+	tristate "goodix gx368 otp Fingerprint"
+	default n     
+config FINGERPRINT_CS15XX
+	tristate "ChipSailing Fingerprint"
+	default n
+config FINGERPRINT_SW9551
+	tristate "xinwei Fingerprint"
+	default n
+
+config FINGERPRINT_FPS
+	tristate "fps Fingerprint"
+	default n
+
 endif
 endmenu
+
