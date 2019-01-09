@@ -2,7 +2,6 @@
 # Makefile for the memory technology device drivers.
 #
 
-subdir-ccflags-y += -Werror
 
 # Core functionality.
 obj-$(CONFIG_MTD)		+= mtd.o
