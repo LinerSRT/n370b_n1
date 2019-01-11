@@ -120,7 +120,7 @@ static inline void aee_rr_rec_last_irq_exit(int cpu, int irq, u64 j)
 {
 }
 
-static inline void aee_rr_rec_last_sched_jiffies(int cpu, u64 j, const char *comm)
+static inline void aee_rr_rec_hotplug(int cpu, u8 data1, u8 data2, unsigned long data3)
 {
 }
 

@@ -1174,6 +1174,7 @@ static void ptp_init_ctrl(struct ptp_ctrl *ctrl)
 }
 
 #define _BIT_(_bit_)                        (unsigned)(1 << (_bit_))
+#define _BITS_(_bits_, _val_)               ((((unsigned) -1 >> (31 - ((1) ? _bits_))) & ~((1U << ((0) ? _bits_)) - 1)) & ((_val_)<<((0) ? _bits_)))
 #define _BITMASK_(_bits_)                   (((unsigned) -1 >> (31 - ((1) ? _bits_))) & ~((1U << ((0) ? _bits_)) - 1))
 #define _GET_BITS_VAL_(_bits_, _val_)       (((_val_) & (_BITMASK_(_bits_))) >> ((0) ? _bits_))
 

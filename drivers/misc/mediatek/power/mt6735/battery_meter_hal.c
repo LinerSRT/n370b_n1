@@ -67,9 +67,12 @@ void get_hw_chip_diff_trim_value(void)
 #else
 
 #if 1
-	chip_diff_trim_value_4_0 = 0;
+	signed int reg_val = 0;
 
-	bm_print(BM_LOG_CRTI, "[Chip_Trim] chip_diff_trim_value_4_0=%d\n",
+	reg_val = upmu_get_reg_value(0xCB8);
+	chip_diff_trim_value_4_0 = (reg_val >> 7) & 0x001F;	/* chip_diff_trim_value_4_0 = (reg_val>>10)&0x001F; */
+
+	bm_print(BM_LOG_CRTI, "[Chip_Trim] Reg[0xCB8]=0x%x, chip_diff_trim_value_4_0=%d\n", reg_val,
 		 chip_diff_trim_value_4_0);
 #else
 	bm_print(BM_LOG_FULL, "[Chip_Trim] need check reg number\n");
@@ -207,14 +210,14 @@ int get_hw_ocv(void)
 	adc_result_reg = pmic_get_register_value(PMIC_AUXADC_ADC_OUT_WAKEUP_SWCHR);
 	/* mt6325_upmu_get_rg_adc_out_wakeup_swchr(); */
 	adc_result = (adc_result_reg * r_val_temp * VOLTAGE_FULL_RANGE) / ADC_PRECISE;
-	bm_err("[oam] get_hw_ocv (swchr) : adc_result_reg=%d, adc_result=%d, start_sel=%d\n",
-		 adc_result_reg, adc_result, pmic_get_register_value(PMIC_STRUP_AUXADC_START_SEL));
+	bm_print(BM_LOG_CRTI, "[oam] get_hw_ocv (swchr) : adc_result_reg=%d, adc_result=%d\n",
+		 adc_result_reg, adc_result);
 #else
 	adc_result_reg = pmic_get_register_value(PMIC_AUXADC_ADC_OUT_WAKEUP_PCHR);
 /* mt6325_upmu_get_rg_adc_out_wakeup_pchr(); */
 	adc_result = (adc_result_reg * r_val_temp * VOLTAGE_FULL_RANGE) / ADC_PRECISE;
-	bm_err("[oam] get_hw_ocv (pchr) : adc_result_reg=%d, adc_result=%d, start_sel=%d\n",
-		 adc_result_reg, adc_result, pmic_get_register_value(PMIC_STRUP_AUXADC_START_SEL));
+	bm_print(BM_LOG_CRTI, "[oam] get_hw_ocv (pchr) : adc_result_reg=%d, adc_result=%d\n",
+		 adc_result_reg, adc_result);
 #endif
 
 	adc_result += g_hw_ocv_tune_value;
@@ -935,29 +938,6 @@ static signed int read_hw_ocv(void *data)
 	return STATUS_OK;
 }
 
-static signed int read_is_hw_ocv_ready(void *data)
-{
-#if defined(CONFIG_POWER_EXT)
-	*(signed int *) (data) = 0;
-#else
-#if defined(SWCHR_POWER_PATH)
-	*(signed int *) (data) = pmic_get_register_value(PMIC_AUXADC_ADC_RDY_WAKEUP_SWCHR);
-	bm_err("[read_is_hw_ocv_ready] is_hw_ocv_ready(SWCHR) %d\n", *(signed int *) (data));
-	pmic_set_register_value(PMIC_AUXADC_ADC_RDY_WAKEUP_CLR, 1);
-	mdelay(1);
-	pmic_set_register_value(PMIC_AUXADC_ADC_RDY_WAKEUP_CLR, 0);
-#else
-	*(signed int *) (data) = pmic_get_register_value(PMIC_AUXADC_ADC_RDY_WAKEUP_PCHR);
-	bm_err("[read_is_hw_ocv_ready] is_hw_ocv_ready(PCHR) %d\n", *(signed int *) (data));
-	pmic_set_register_value(PMIC_AUXADC_ADC_RDY_WAKEUP_CLR, 1);
-	mdelay(1);
-	pmic_set_register_value(PMIC_AUXADC_ADC_RDY_WAKEUP_CLR, 0);
-#endif
-#endif
-
-	return STATUS_OK;
-}
-
 static signed int dump_register_fgadc(void *data)
 {
 	return STATUS_OK;
@@ -993,7 +973,6 @@ signed int bm_ctrl_cmd(BATTERY_METER_CTRL_CMD cmd, void *data)
 		bm_func[BATTERY_METER_CMD_SET_COLUMB_INTERRUPT] = fgauge_set_columb_interrupt;
 		bm_func[BATTERY_METER_CMD_GET_BATTERY_PLUG_STATUS] = read_battery_plug_out_status;
 		bm_func[BATTERY_METER_CMD_GET_HW_FG_CAR_ACT] = fgauge_read_columb_accurate;
-		bm_func[BATTERY_METER_CMD_GET_IS_HW_OCV_READY] = read_is_hw_ocv_ready;
 	}
 
 	if (cmd < BATTERY_METER_CMD_NUMBER) {

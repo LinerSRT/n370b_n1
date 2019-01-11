@@ -1,16 +1,3 @@
-/*
-* Copyright (C) 2013 MediaTek Inc.
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License version 2 as
-* published by the Free Software Foundation.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-* See http://www.gnu.org/licenses/gpl-2.0.html for more details.
-*/
-
 #include "inc/alsps.h"
 #include "inc/aal_control.h"
 struct alsps_context *alsps_context_obj = NULL;
@@ -83,7 +70,7 @@ static void als_work_func(struct work_struct *work)
 			goto als_loop;
 		}
 	}
-	/* ALSPS_LOG(" als data[%d]\n" , cxt->drv_data.als_data.values[0]); */
+	ALSPS_LOG(" als data[%d]\n" , cxt->drv_data.als_data.values[0]);
 	als_data_report(cxt->idev,
 	cxt->drv_data.als_data.values[0],
 	cxt->drv_data.als_data.status);
@@ -133,7 +120,7 @@ static void ps_work_func(struct work_struct *work)
 	}
 
 	if (cxt->is_get_valid_ps_data_after_enable == false) {
-		if (ALSPS_INVALID_VALUE != cxt->drv_data.ps_data.values[0])
+		if (ALSPS_INVALID_VALUE != cxt->drv_data.als_data.values[0])
 			cxt->is_get_valid_ps_data_after_enable = true;
 	}
 
@@ -209,7 +196,7 @@ static int als_real_enable(int enable)
 	if (1 == enable) {
 		if (true == cxt->is_als_active_data || true == cxt->is_als_active_nodata) {
 			err = cxt->als_ctl.enable_nodata(1);
-			if (err) {
+			if (err)
 				err = cxt->als_ctl.enable_nodata(1);
 				if (err) {
 					err = cxt->als_ctl.enable_nodata(1);
@@ -217,8 +204,7 @@ static int als_real_enable(int enable)
 						ALSPS_ERR("alsps enable(%d) err 3 timers = %d\n", enable, err);
 				}
 			}
-		}
-		ALSPS_LOG("alsps real enable\n");
+			ALSPS_LOG("alsps real enable\n");
 	}
 
 	if (0 == enable) {
@@ -496,14 +482,8 @@ static ssize_t als_show_devnum(struct device *dev,
 	unsigned int devnum;
 	const char *devname = NULL;
 	int ret;
-	struct input_handle *handle;
 
-	list_for_each_entry(handle, &alsps_context_obj->idev->h_list, d_node)
-		if (strncmp(handle->name, "event", 5) == 0) {
-			devname = handle->name;
-			break;
-		}
-
+	devname = dev_name(&alsps_context_obj->idev->dev);
 	ret = sscanf(devname+5, "%d", &devnum);
 	return snprintf(buf, PAGE_SIZE, "%d\n", devnum);
 }
@@ -648,14 +628,8 @@ static ssize_t ps_show_devnum(struct device *dev,
 	unsigned int devnum;
 	const char *devname = NULL;
 	int ret;
-	struct input_handle *handle;
 
-	list_for_each_entry(handle, &alsps_context_obj->idev->h_list, d_node)
-		if (strncmp(handle->name, "event", 5) == 0) {
-			devname = handle->name;
-			break;
-		}
-
+	devname = dev_name(&alsps_context_obj->idev->dev);
 	ret = sscanf(devname+5, "%d", &devnum);
 	return snprintf(buf, PAGE_SIZE, "%d\n", devnum);
 }

@@ -886,15 +886,14 @@ static int _mt_gpufreq_set_cur_volt(unsigned int new_oppidx)
 	case GPU_DVFS_FREQ0_0:
 	case GPU_DVFS_FREQ0:
 		g_last_gpu_dvs_result = vcorefs_request_dvfs_opp(KIR_GPU, OPPI_PERF_ULTRA);
-		break;
 #else
 	case GPU_DVFS_FREQ0:
 #ifdef CONFIG_ARCH_MT6735
 	case GPU_DVFS_FREQ0_1:
 #endif
 		g_last_gpu_dvs_result = vcorefs_request_dvfs_opp(KIR_GPU, OPPI_PERF);
-		break;
 #endif
+		break;
 	case GPU_DVFS_FREQ1:
 #ifdef CONFIG_ARCH_MT6753
 		g_last_gpu_dvs_result = vcorefs_request_dvfs_opp(KIR_GPU, OPPI_LOW_PWR);
@@ -922,7 +921,7 @@ static int _mt_gpufreq_set_cur_volt(unsigned int new_oppidx)
 		if (NULL != g_pVoltSampler)
 			g_pVoltSampler(volt_new);
 	} else
-		gpufreq_dbg("@%s: GPU DVS failed, ret = %d\n", __func__, g_last_gpu_dvs_result);
+		gpufreq_warn("@%s: GPU DVS failed, ret = %d\n", __func__, g_last_gpu_dvs_result);
 
 	return g_last_gpu_dvs_result;
 }
@@ -1721,7 +1720,7 @@ int mt_gpufreq_voltage_enable_set(unsigned int enable)
 		if (ret) {
 			unsigned int cur_freq = _mt_gpufreq_get_cur_freq();
 
-			gpufreq_dbg("@%s: Set Vcore to %dmV failed! ret = 0x%x, cur_freq = %d\n",
+			gpufreq_err("@%s: Set Vcore to %dmV failed! ret = 0x%x, cur_freq = %d\n",
 					__func__,
 					mt_gpufreqs[g_cur_gpu_OPPidx].gpufreq_volt / 100,
 					ret,
@@ -2522,8 +2521,7 @@ static ssize_t mt_gpufreq_opp_freq_proc_write(struct file *file, const char __us
 			* If 550MHz is exist, mask it when vcorefs is disabled
 			*************************************************/
 			g_is_vcorefs_on = is_vcorefs_can_work();
-			if ((!can_do_gpu_dvs())
-					&& (mt_gpufreq_dvfs_table_type == 0 || mt_gpufreq_dvfs_table_type == 2)) {
+			if ((!can_do_gpu_dvs()) && (mt_gpufreq_dvfs_table_type == 0 || mt_gpufreq_dvfs_table_type == 2)) {
 				unsigned int limited_freq =
 					mt_gpufreqs[g_gpufreq_max_id_vcorefs_off].gpufreq_khz;
 

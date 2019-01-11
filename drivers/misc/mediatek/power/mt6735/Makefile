@@ -10,7 +10,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
-
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/spm_v2
 #obj-$(CONFIG_MTK_PMIC)          += pmic.o upmu_common.o pmic_auxadc.o pmic_chr_type_det.o mt6311.o
 obj-$(CONFIG_MTK_PMIC)          += pmic.o upmu_common.o pmic_auxadc.o mt6311.o
 
@@ -32,16 +32,16 @@ else
                ifeq ($(CONFIG_MTK_BQ24296_SUPPORT),y)
                     obj-$(CONFIG_MTK_SMART_BATTERY) += bq24296.o charging_hw_bq24296.o
                else
+                ifeq ($(CONFIG_MTK_BQ24158_SUPPORT),y)
+                    obj-$(CONFIG_MTK_SMART_BATTERY) += bq24158.o charging_hw_bq24158.o
+                else
                     ifeq ($(CONFIG_MTK_FAN5405_SUPPORT),y)
                         obj-$(CONFIG_MTK_SMART_BATTERY) += fan5405.o charging_hw_fan5405.o
                     else
-                         ifeq ($(CONFIG_MTK_RT9536_SUPPORT),y)
-                             obj-$(CONFIG_MTK_SMART_BATTERY) += rt9536.o charging_hw_rt9536.o
-                         else
-                             obj-$(CONFIG_MTK_SMART_BATTERY) += charging_hw_pmic.o
-                         endif
-                    endif
+                    obj-$(CONFIG_MTK_SMART_BATTERY) += charging_hw_pmic.o
                endif
           endif
      endif
+endif
+endif
 endif

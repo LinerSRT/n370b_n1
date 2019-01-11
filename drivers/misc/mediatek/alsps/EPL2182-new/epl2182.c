@@ -85,10 +85,10 @@ struct epl_raw_data {
 
 /*----------------------------------------------------------------------------*/
 #define APS_TAG                  "[ALS/PS] "
-#define APS_FUN(f)               pr_err(APS_TAG"%s\n", __func__)
+#define APS_FUN(f)               pr_debug(APS_TAG"%s\n", __func__)
 #define APS_ERR(fmt, args...)    pr_err(APS_TAG"%s %d : "fmt, __func__, __LINE__, ##args)
-#define APS_LOG(fmt, args...)    pr_err(APS_TAG fmt, ##args)
-#define APS_DBG(fmt, args...)    pr_err(APS_TAG fmt, ##args)
+#define APS_LOG(fmt, args...)    pr_debug(APS_TAG fmt, ##args)
+#define APS_DBG(fmt, args...)    pr_debug(APS_TAG fmt, ##args)
 #define FTM_CUST_ALSPS "/data/epl2182"
 
 #define POWER_NONE_MACRO MT65XX_POWER_NONE
@@ -657,6 +657,55 @@ long epl2182_read_ps(struct i2c_client *client, u16 *data)
 	return 0;
 }
 
+static ssize_t epl2182_show_ps(struct device_driver *ddri, char *buf)
+{
+    ssize_t res;
+    u16 data = 0;
+    if(!epl2182_obj)
+    {
+        APS_ERR("epl2182_read_ps_obj is null!!\n");
+        return 0;
+    }
+
+    if(test_bit(CMC_BIT_ALS, &epl2182_obj->enable))
+    {
+        data = gRawData.ps_raw;
+
+        if(data < epl2182_obj->ps_cali)
+            data = 0;
+        else
+            data -= epl2182_obj->ps_cali;
+
+#if LOW_GAIN_DATA_SHEET
+        data = (data >>3);
+        if(data > 1023)
+            data = 1023;
+        else if(data < 5)
+            data = 0;
+#endif
+        return snprintf(buf, PAGE_SIZE, "%d\n", data);
+    }
+    else
+    {
+        if(res = epl2182_read_ps(epl2182_obj->client, &data))
+        {
+            return snprintf(buf, PAGE_SIZE, "ERROR: %ld\n", res);
+        }
+        else
+        {
+#if 0 //LOW_GAIN_DATA_SHEET
+            data = (data >>3);
+            if(data > 1000)
+                data = 1023;
+            if(data < 5)
+                data = 0;
+#endif
+            return snprintf(buf, PAGE_SIZE, "%d\n", data);
+        }
+    }
+
+    return snprintf(buf, PAGE_SIZE, "%d\n", gRawData.ps_raw );
+}
 
 /*----------------------------------------------------------------------------*/
 #ifdef CUSTOM_KERNEL_SENSORHUB
@@ -1101,6 +1150,7 @@ static ssize_t epl2182_store_ps_int_time(struct device_driver *ddri, const char 
 
 /*----------------------------------------------------------------------------*/
 static DRIVER_ATTR(status, S_IWUSR | S_IRUGO, epl2182_show_status, NULL);
+static DRIVER_ATTR(ps,      S_IRUGO, epl2182_show_ps,    NULL);
 static DRIVER_ATTR(reg, S_IWUSR | S_IRUGO, epl2182_show_reg, NULL);
 static DRIVER_ATTR(als_int_time, S_IWUSR | S_IRUGO, NULL, epl2182_store_als_int_time);
 static DRIVER_ATTR(ps_int_time, S_IWUSR | S_IRUGO, NULL, epl2182_store_ps_int_time);
@@ -1108,6 +1158,7 @@ static DRIVER_ATTR(ps_int_time, S_IWUSR | S_IRUGO, NULL, epl2182_store_ps_int_ti
 /*----------------------------------------------------------------------------*/
 static struct driver_attribute *epl2182_attr_list[] = {
 	&driver_attr_status,
+    &driver_attr_ps,
 	&driver_attr_reg,
 	&driver_attr_als_int_time,
 	&driver_attr_ps_int_time,
@@ -1498,71 +1549,6 @@ err_out:
 	return err;
 }
 
-#ifdef CONFIG_COMPAT
-static long epl2182_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-{
-	long err = 0;
-
-	void __user *arg32 = compat_ptr(arg);
-
-	if (!file->f_op || !file->f_op->unlocked_ioctl)
-		return -ENOTTY;
-
-	switch (cmd) {
-	case COMPAT_ALSPS_SET_PS_MODE:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_SET_PS_MODE, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_PS_MODE:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_PS_MODE, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_PS_DATA:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_PS_DATA, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_PS_RAW_DATA:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_PS_RAW_DATA, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_SET_ALS_MODE:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_SET_ALS_MODE, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_ALS_MODE:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_ALS_MODE, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_ALS_DATA:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_ALS_DATA, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_ALS_RAW_DATA:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_ALS_RAW_DATA, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_PS_TEST_RESULT:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_PS_TEST_RESULT, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_IOCTL_CLR_CALI:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_IOCTL_CLR_CALI, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_IOCTL_GET_CALI:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_IOCTL_GET_CALI, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_IOCTL_SET_CALI:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_IOCTL_SET_CALI, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_SET_PS_THRESHOLD:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_SET_PS_THRESHOLD, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_PS_THRESHOLD_HIGH:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_PS_THRESHOLD_HIGH, (unsigned long)arg32);
-		break;
-	case COMPAT_ALSPS_GET_PS_THRESHOLD_LOW:
-		err = file->f_op->unlocked_ioctl(file, ALSPS_GET_PS_THRESHOLD_LOW, (unsigned long)arg32);
-		break;
-	default:
-		APS_ERR("%s not supported = 0x%04x", __func__, cmd);
-		err = -ENOIOCTLCMD;
-		break;
-	}
-
-	return err;
-}
-#endif
 
 /*----------------------------------------------------------------------------*/
 static const struct file_operations epl2182_fops = {
@@ -1570,9 +1556,6 @@ static const struct file_operations epl2182_fops = {
 	.open = epl2182_open,
 	.release = epl2182_release,
 	.unlocked_ioctl = epl2182_unlocked_ioctl,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = epl2182_compat_ioctl,
-#endif
 };
 
 
@@ -1865,9 +1848,16 @@ static int epl2182_i2c_probe(struct i2c_client *client, const struct i2c_device_
 	struct als_data_path als_data = { 0 };
 	struct ps_control_path ps_ctl = { 0 };
 	struct ps_data_path ps_data = { 0 };
+	uint8_t read_data[2];
 	int err = 0;
 
 	APS_FUN();
+	elan_epl2182_I2C_Read(client, REG_19, R_SINGLE_BYTE, 0x01, read_data);
+    if(read_data[0]!=0x68)
+    {
+        err=-1;
+    goto exit;
+    }
 
 	/* epl2182_dumpReg(client); */
 	obj = kzalloc(sizeof(*obj), GFP_KERNEL);
@@ -2084,7 +2074,7 @@ static int alsps_local_init(void)
 
 	if (-1 == alsps_init_flag)
 		return -1;
-	/* printk("fwq loccal init---\n"); */
+	/* APS_DBG("fwq loccal init---\n"); */
 	return 0;
 }
 

@@ -28,7 +28,7 @@
 #ifdef CONFIG_MTK_FIQ_CACHE
 #include <mach/mt_secure_api.h>
 #endif
-
+#include <mt-plat/mtk_ram_console.h>
 /*
  * for CPU MTCMOS
  */
@@ -201,7 +201,6 @@ int spm_mtcmos_ctrl_cpu1(int state, int chkWfiBeforePdn)
 			while ((spm_read(SPM_SLEEP_TIMER_STA) &
 				CA7_CPU1_STANDBYWFI) == 0)
 				;
-
 		spm_mtcmos_cpu_lock(&flags);
 
 		spm_write(SPM_CA7_CPU1_PWR_CON,
@@ -209,10 +208,13 @@ int spm_mtcmos_ctrl_cpu1(int state, int chkWfiBeforePdn)
 
 		spm_write(SPM_CA7_CPU1_PWR_CON,
 			  spm_read(SPM_CA7_CPU1_PWR_CON) | SRAM_CKISO);
+
 		spm_write(SPM_CA7_CPU1_PWR_CON,
 			  spm_read(SPM_CA7_CPU1_PWR_CON) & ~SRAM_ISOINT_B);
+
 		spm_write(SPM_CA7_CPU1_L1_PDN,
 			  spm_read(SPM_CA7_CPU1_L1_PDN) | L1_PDN);
+
 #ifndef CONFIG_MTK_FPGA
 		while ((spm_read(SPM_CA7_CPU1_L1_PDN) & L1_PDN_ACK) !=
 		       L1_PDN_ACK)
@@ -221,13 +223,16 @@ int spm_mtcmos_ctrl_cpu1(int state, int chkWfiBeforePdn)
 
 		spm_write(SPM_CA7_CPU1_PWR_CON,
 			  spm_read(SPM_CA7_CPU1_PWR_CON) & ~PWR_RST_B);
+
 		spm_write(SPM_CA7_CPU1_PWR_CON,
 			  spm_read(SPM_CA7_CPU1_PWR_CON) | PWR_CLK_DIS);
 
 		spm_write(SPM_CA7_CPU1_PWR_CON,
 			  spm_read(SPM_CA7_CPU1_PWR_CON) & ~PWR_ON);
+
 		spm_write(SPM_CA7_CPU1_PWR_CON,
 			  spm_read(SPM_CA7_CPU1_PWR_CON) & ~PWR_ON_2ND);
+
 #ifndef CONFIG_MTK_FPGA
 		while (((spm_read(SPM_PWR_STATUS) & CA7_CPU1) != 0)
 		       || ((spm_read(SPM_PWR_STATUS_2ND) & CA7_CPU1) != 0))
@@ -235,6 +240,7 @@ int spm_mtcmos_ctrl_cpu1(int state, int chkWfiBeforePdn)
 #endif
 
 		spm_mtcmos_cpu_unlock(&flags);
+
 	} else {		/* STA_POWER_ON */
 
 		spm_mtcmos_cpu_lock(&flags);

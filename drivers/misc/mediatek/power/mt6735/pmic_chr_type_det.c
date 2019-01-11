@@ -54,7 +54,7 @@
 #ifdef CONFIG_MTK_USB2JTAG_SUPPORT
 #include <mt-plat/mt_usb2jtag.h>
 #endif
-
+#include <mt-plat/mt_boot.h>
 /* ============================================================ // */
 /* extern function */
 /* ============================================================ // */
@@ -81,6 +81,16 @@ static void hw_bc11_dump_register(void)
 static void hw_bc11_init(void)
 {
 	msleep(200);
+
+	/* add make sure USB Ready */
+	if (is_usb_rdy() == KAL_FALSE) {
+		battery_log(BAT_LOG_CRTI, "CDP, block\n");
+		while(is_usb_rdy() == KAL_FALSE)
+			msleep(100);
+		battery_log(BAT_LOG_CRTI, "CDP, free\n");
+	} else
+		battery_log(BAT_LOG_CRTI, "CDP, PASS\n");
+
 #if defined(CONFIG_MTK_SMART_BATTERY)
 	Charger_Detect_Init();
 #endif

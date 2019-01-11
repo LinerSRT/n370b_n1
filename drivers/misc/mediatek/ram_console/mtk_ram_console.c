@@ -921,12 +921,6 @@ void aee_rr_rec_hotplug_cb_index(u8 val)
 	LAST_RR_SET(hotplug_cb_index, val);
 }
 
-void aee_rr_rec_hotplug_cb_fp(unsigned long val)
-{
-	if (!ram_console_init_done || !ram_console_buffer)
-		return;
-	LAST_RR_SET(hotplug_cb_fp, val);
-}
 
 void aee_rr_rec_cpu_caller(u32 val)
 {
