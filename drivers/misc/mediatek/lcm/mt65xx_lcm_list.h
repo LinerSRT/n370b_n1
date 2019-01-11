@@ -16,6 +16,14 @@
 
 #include <lcm_drv.h>
 extern LCM_DRIVER nt35521_boe50_xld_hd_lcm_drv;
+extern LCM_DRIVER rm68200_cpt50_blj_hd_lcm_drv;
+extern LCM_DRIVER jd9365_inx50_jmg_hd_lcm_drv;
+extern LCM_DRIVER hx8394d_cmi50_blj_hd_lcm_drv;
+extern LCM_DRIVER otm1283a_cmi50_tps65132_hd_lcm_drv;
+extern LCM_DRIVER ili9881c_auo50_xzx_hd_lcm_drv;
+
+
+
 extern LCM_DRIVER otm1282a_hd720_dsi_vdo_60hz_lcm_drv;
 extern LCM_DRIVER otm1282a_hd720_dsi_vdo_lcm_drv;
 extern LCM_DRIVER nt35595_fhd_dsi_cmd_truly_8163_lcm_drv;

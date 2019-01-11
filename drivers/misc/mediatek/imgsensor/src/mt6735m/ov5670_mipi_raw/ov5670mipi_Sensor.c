@@ -1,16 +1,3 @@
-/*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
-
 /*****************************************************************************
  *
  * Filename:
@@ -156,7 +143,11 @@ static imgsensor_info_struct imgsensor_info = {
 
 
 static imgsensor_struct imgsensor = {
-	.mirror = IMAGE_NORMAL,				//mirrorflip information
+#ifndef VANZO_IMGSENSOR_OV5670_ROTATION
+	.mirror = IMAGE_HV_MIRROR,				//mirrorflip information
+#else
+	.mirror = IMAGE_H_MIRROR,				//mirrorflip information
+#endif
 	.sensor_mode = IMGSENSOR_MODE_INIT, //IMGSENSOR_MODE enum value,record current sensor mode,such as: INIT, Preview, Capture, Video,High Speed Video, Slim Video
 	.shutter = 0x4C00,					//current shutter
 	.gain = 0x0200,						//current gain
@@ -259,15 +250,13 @@ static void write_shutter(kal_uint16 shutter)
 		imgsensor.frame_length = imgsensor.min_frame_length;
 	if (imgsensor.frame_length > imgsensor_info.max_frame_length)
 		imgsensor.frame_length = imgsensor_info.max_frame_length;
+	imgsensor.frame_length = (imgsensor.frame_length>>1)<<1;
 	spin_unlock(&imgsensor_drv_lock);
 	shutter = (shutter < imgsensor_info.min_shutter) ? imgsensor_info.min_shutter : shutter;
 	shutter = (shutter > (imgsensor_info.max_frame_length - imgsensor_info.margin)) ? (imgsensor_info.max_frame_length - imgsensor_info.margin) : shutter;
-
-    // Framelength should be an even number
-    shutter = (shutter >> 1) << 1;
-    imgsensor.frame_length = (imgsensor.frame_length >> 1) << 1;
-
-	if (imgsensor.autoflicker_en) {
+	shutter = (shutter>>1)<<1;
+	
+	if (imgsensor.autoflicker_en) { 
 		realtime_fps = imgsensor.pclk / imgsensor.line_length * 10 / imgsensor.frame_length;
 		if(realtime_fps >= 297 && realtime_fps <= 305)
 			set_max_framerate(296,0);
@@ -454,7 +443,7 @@ static void ihdr_write_shutter_gain(kal_uint16 le, kal_uint16 se, kal_uint16 gai
 }
 
 
-#if 0
+
 static void set_mirror_flip(kal_uint8 image_mirror)
 {
 	LOG_INF("image_mirror = %d\n", image_mirror);
@@ -497,7 +486,7 @@ static void set_mirror_flip(kal_uint8 image_mirror)
 	}
 
 }
-#endif
+
 /*************************************************************************
 * FUNCTION
 *	night_mode
@@ -754,7 +743,7 @@ static void sensor_init(void)
 	write_cmos_sensor(0x4800, 0x6c);
 	write_cmos_sensor(0x4816, 0x53);
 	write_cmos_sensor(0x481f, 0x40);
-	write_cmos_sensor(0x4837, 0x13); // ;11 mipi global timing datarate 940 -> 840
+	write_cmos_sensor(0x4837, 0x12); // ;11 mipi global timing datarate 940 -> 840
 	write_cmos_sensor(0x5000, 0x56);
 	write_cmos_sensor(0x5001, 0x01);
 	write_cmos_sensor(0x5002, 0x28);
@@ -864,7 +853,7 @@ static void preview_setting(void)
 	write_cmos_sensor(0x4600, 0x00);  //
 	write_cmos_sensor(0x4601, 0x81);  //
 	write_cmos_sensor(0x4017, 0x10);  //; threshold = 4LSB for Binning
-	write_cmos_sensor(0x4837, 0x13);
+	write_cmos_sensor(0x4837, 0x12);
 	write_cmos_sensor(0x400a, 0x02);  //;
 	write_cmos_sensor(0x400b, 0x00);  //;
 
@@ -912,7 +901,7 @@ static void capture_setting(kal_uint16 currefps)
 		write_cmos_sensor(0x4600, 0x01);
 		write_cmos_sensor(0x4601, 0x03);
 		write_cmos_sensor(0x4017, 0x08); //threshold= 2LSB for full size
-		write_cmos_sensor(0x4837, 0x26);
+		write_cmos_sensor(0x4837, 0x24);
 		write_cmos_sensor(0x400a, 0x02); //
 		write_cmos_sensor(0x400b, 0x00); //
 
@@ -956,7 +945,7 @@ static void capture_setting(kal_uint16 currefps)
 		write_cmos_sensor(0x4600, 0x01);
 		write_cmos_sensor(0x4601, 0x03);
 		write_cmos_sensor(0x4017, 0x08); //threshold= 2LSB for full size
-		write_cmos_sensor(0x4837, 0x13);
+		write_cmos_sensor(0x4837, 0x12);
 		write_cmos_sensor(0x400a, 0x02); //
 		write_cmos_sensor(0x400b, 0x00); //
 
@@ -1007,7 +996,7 @@ static void normal_video_setting(kal_uint16 currefps)
 	write_cmos_sensor(0x4600, 0x00);  // 							  
 	write_cmos_sensor(0x4601, 0x81);  // 							  
 	write_cmos_sensor(0x4017, 0x10);  //; threshold = 4LSB for Binning 
-	write_cmos_sensor(0x4837, 0x13);
+	write_cmos_sensor(0x4837, 0x12);
 	write_cmos_sensor(0x400a, 0x02); //
 	write_cmos_sensor(0x400b, 0x00); //
 
@@ -1049,7 +1038,7 @@ static void hs_video_setting(void)
 	write_cmos_sensor(0x4600,0x00);
 	write_cmos_sensor(0x4601,0x40);
 	write_cmos_sensor(0x4017,0x10);
-	write_cmos_sensor(0x4837, 0x13);
+	write_cmos_sensor(0x4837, 0x12);
 	write_cmos_sensor(0x400a,0x02);
 	write_cmos_sensor(0x400b,0x00);
 	write_cmos_sensor(0x0100,0x01);
@@ -1320,6 +1309,7 @@ static kal_uint32 preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	imgsensor.autoflicker_en = KAL_FALSE;
 	spin_unlock(&imgsensor_drv_lock);
 	preview_setting();
+		set_mirror_flip(imgsensor.mirror);
 	return ERROR_NONE;
 }	/*	preview   */
 
@@ -1364,6 +1354,7 @@ static kal_uint32 capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 
 	capture_setting(imgsensor.current_fps);
 
+		set_mirror_flip(imgsensor.mirror);
 
 	return ERROR_NONE;
 }	/* capture() */
@@ -1383,6 +1374,7 @@ static kal_uint32 normal_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	spin_unlock(&imgsensor_drv_lock);
 	normal_video_setting(imgsensor.current_fps);
 
+		set_mirror_flip(imgsensor.mirror);
 
 	return ERROR_NONE;
 }	/*	normal_video   */
@@ -1404,6 +1396,7 @@ static kal_uint32 hs_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	imgsensor.autoflicker_en = KAL_FALSE;
 	spin_unlock(&imgsensor_drv_lock);
 	hs_video_setting();
+		set_mirror_flip(imgsensor.mirror);
 
 	return ERROR_NONE;
 }	/*	hs_video   */
@@ -1424,6 +1417,7 @@ static kal_uint32 slim_video(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	imgsensor.autoflicker_en = KAL_FALSE;
 	spin_unlock(&imgsensor_drv_lock);
 	slim_video_setting();
+		set_mirror_flip(imgsensor.mirror);
 
 	return ERROR_NONE;
 }	/*	slim_video	 */
@@ -1796,7 +1790,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			*feature_para_len=4;
 			break;
 		case SENSOR_FEATURE_SET_VIDEO_MODE:
-            set_video_mode(*feature_data);
+            set_video_mode(*feature_data_16);
 			break;
 		case SENSOR_FEATURE_CHECK_SENSOR_ID:
 			get_imgsensor_id(feature_return_para_32);

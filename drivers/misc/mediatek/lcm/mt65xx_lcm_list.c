@@ -37,6 +37,21 @@ LCM_DRIVER *lcm_driver_list[] = {
 #if defined(NT35521_BOE50_XLD_HD)
 	&nt35521_boe50_xld_hd_lcm_drv,
 #endif
+#if defined(JD9365_INX50_JMG_HD)
+        &jd9365_inx50_jmg_hd_lcm_drv,
+#endif
+#if defined(HX8394D_CMI50_BLJ_HD)
+        &hx8394d_cmi50_blj_hd_lcm_drv,
+#endif
+#if defined(ILI9881C_AUO50_XZX_HD)
+	&ili9881c_auo50_xzx_hd_lcm_drv,
+#endif
+#if defined(RM68200_CPT50_BLJ_HD)
+    &rm68200_cpt50_blj_hd_lcm_drv,
+#endif
+#if defined(OTM1283A_CMI50_TPS65132_HD)
+    &otm1283a_cmi50_tps65132_hd_lcm_drv,
+#endif
 #if defined(OTM1284A_HD720_DSI_VDO_TM)
 	&otm1284a_hd720_dsi_vdo_tm_lcm_drv,
 #endif

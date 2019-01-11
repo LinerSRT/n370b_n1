@@ -199,17 +199,11 @@ typedef enum {
 	SENSOR_FEATURE_SET_MIN_MAX_FPS,
 	SENSOR_FEATURE_GET_PDAF_INFO,
 	SENSOR_FEATURE_GET_PDAF_DATA,
-	SENSOR_FEATURE_SET_PDFOCUS_AREA,
 	SENSOR_FEATURE_GET_SENSOR_PDAF_CAPACITY,
 	SENSOR_FEATURE_DEBUG_IMGSENSOR,
 	SENSOR_FEATURE_SET_HDR_SHUTTER,
-	SENSOR_FEATURE_SET_ISO,
-	SENSOR_FEATURE_SET_PDAF,
-	SENSOR_FEATURE_SET_SHUTTER_FRAME_TIME,
-	SENSOR_FEATURE_SET_SHUTTER_BUF_MODE,
-	SENSOR_FEATURE_SET_GAIN_BUF_MODE,
-	SENSOR_FEATURE_SET_I2C_BUF_MODE_EN,
-	SENSOR_FEATURE_GET_SENSOR_HDR_CAPACITY,
+    SENSOR_FEATURE_SET_ISO,
+    SENSOR_FEATURE_SET_PDAF,
 	SENSOR_FEATURE_MAX
 } ACDK_SENSOR_FEATURE_ENUM;
 
@@ -287,8 +281,7 @@ typedef enum {
 
 typedef enum {
 	MIPI_OPHY_NCSI2 = 0,
-	MIPI_OPHY_CSI2  = 1,
-	MIPI_CPHY       = 2,
+	MIPI_OPHY_CSI2 = 1,
 } SENSOR_MIPI_TYPE_ENUM;
 
 typedef enum {
@@ -411,7 +404,6 @@ typedef struct {
 	MUINT8 AEShutDelayFrame;    /* The frame of setting shutter default 0 for TG int */
 	MUINT8 AESensorGainDelayFrame;  /* The frame of setting sensor gain */
 	MUINT8 AEISPGainDelayFrame;
-	MUINT8 FrameTimeDelayFrame; /* The delay frame of setting frame length  */
 	MUINT8 MIPIDataLowPwr2HighSpeedTermDelayCount;
 	MUINT8 MIPIDataLowPwr2HighSpeedSettleDelayCount;
 	MUINT8 MIPICLKLowPwr2HighSpeedTermDelayCount;
@@ -423,13 +415,8 @@ typedef struct {
 	MUINT8 SensorModeNum;
 	MUINT8 IHDR_Support;
 	MUINT16 IHDR_LE_FirstLine;
-	MUINT8 ZHDR_Mode;
 	SENSOR_SETTLEDELAY_MODE_ENUM SettleDelayMode;
-	/*0: NO PDAF, 1: PDAF Raw Data mode, 2:PDAF VC mode(Full),
-	 * 3:PDAF VC mode(Binning), 4: PDAF DualPD Raw Data mode, 5: PDAF DualPD VC mode
-         */
 	MUINT8 PDAF_Support;
-	MUINT8 HDR_Support;/*0: NO HDR, 1: iHDR, 2:mvHDR, 3:zHDR*/
 	MUINT8 DPCM_INFO;
 	MUINT8 PerFrameCTL_Support;
 	SENSOR_SCAM_DATA_CHANNEL_ENUM SCAM_DataNumber;
@@ -439,9 +426,6 @@ typedef struct {
 	MUINT8 SCAM_CRC_En;
 	MUINT8 SCAM_SOF_src;
 	MUINT32 SCAM_Timout_Cali;
-	MUINT32 SensorMIPIDeskew;
-	MUINT16 SensorHorFOV;
-	MUINT16 SensorVerFOV;
 } ACDK_SENSOR_INFO_STRUCT, *PACDK_SENSOR_INFO_STRUCT;
 
 typedef struct {
@@ -506,7 +490,6 @@ typedef struct {
 	MUINT8 AEShutDelayFrame;    /* The frame of setting shutter default 0 for TG int */
 	MUINT8 AESensorGainDelayFrame;  /* The frame of setting sensor gain */
 	MUINT8 AEISPGainDelayFrame;
-	MUINT8 FrameTimeDelayFrame; /* The delay frame of setting frame length  */
 	MUINT8 MIPIDataLowPwr2HighSpeedTermDelayCount;
 	MUINT8 MIPIDataLowPwr2HighSpeedSettleDelayCount;
 	MUINT8 MIPIDataLowPwr2HSSettleDelayM0;
@@ -523,13 +506,8 @@ typedef struct {
 	MUINT8 SensorModeNum;
 	MUINT8 IHDR_Support;
 	MUINT16 IHDR_LE_FirstLine;
-	MUINT8 ZHDR_Mode;
 	SENSOR_SETTLEDELAY_MODE_ENUM SettleDelayMode;
-	/*0: NO PDAF, 1: PDAF Raw Data mode, 2:PDAF VC mode(Full),
-	3:PDAF VC mode(Binning), 4: PDAF DualPD Raw Data mode, 5: PDAF DualPD VC mode
-	*/
 	MUINT8 PDAF_Support;
-	MUINT8 HDR_Support;/*0: NO HDR, 1: iHDR, 2:mvHDR, 3:zHDR*/
 	MUINT8 DPCM_INFO;
 	MUINT8 IMGSENSOR_DPCM_TYPE_PRE;
 	MUINT8 IMGSENSOR_DPCM_TYPE_CAP;
@@ -544,9 +522,6 @@ typedef struct {
 	MUINT8 SCAM_CRC_En;
 	MUINT8 SCAM_SOF_src;
 	MUINT32 SCAM_Timout_Cali;
-	MUINT32 SensorMIPIDeskew;
-	MUINT16 SensorHorFOV;
-	MUINT16 SensorVerFOV;
 } ACDK_SENSOR_INFO2_STRUCT, *PACDK_SENSOR_INFO2_STRUCT;
 
 
@@ -749,14 +724,10 @@ typedef struct {
 	MUINT32 i4PitchY;
 	MUINT32 i4PairNum;      /* PD pair num in one block */
 	MUINT32 i4SubBlkW;      /* sub block width (one PD pair in one sub block) */
-	MUINT32 i4SubBlkH;		/* sub block height */
-	MUINT32 i4PosL[16][2];	/* left pd pixel position in one block*/
-	MUINT32 i4PosR[16][2];	/* right pd pixel position in one block*/
-	MUINT32 iMirrorFlip;	/* 0:IMAGE_NORMAL,1:IMAGE_H_MIRROR,2:IMAGE_V_MIRROR,3:IMAGE_HV_MIRROR*/
-	MUINT32 i4BlockNumX;
-	MUINT32 i4BlockNumY;
-	MUINT32 i4LeFirst;	   /* 1: 1st line is long exposure, 0: 1st line is short exposure*/
-	MUINT32 i4Crop[10][2]; /* [scenario][crop] -> (xcrop, ycrop) */
+	MUINT32 i4SubBlkH;      /* sub block height */
+	MUINT32 i4PosL[16][2];  /* left pd pixel position in one block*/
+	MUINT32 i4PosR[16][2];  /* right pd pixel position in one block*/
+	MUINT32 iMirrorFlip;    /* 0:IMAGE_NORMAL,1:IMAGE_H_MIRROR,2:IMAGE_V_MIRROR,3:IMAGE_HV_MIRROR*/
 } SET_PD_BLOCK_INFO_T, *PSET_PD_BLOCK_INFO_T;
 
 
@@ -817,20 +788,12 @@ typedef struct {
 } SET_SENSOR_CALIBRATION_DATA_STRUCT, *PSET_SENSOR_CALIBRATION_DATA_STRUCT;
 
 
-#ifdef MTK_SUB2_IMGSENSOR
-typedef struct {
-	MSDK_SCENARIO_ID_ENUM ScenarioId[3];
-	ACDK_SENSOR_INFO_STRUCT * pInfo[3];
-	ACDK_SENSOR_CONFIG_STRUCT * pConfig[3];
-} ACDK_SENSOR_GETINFO_STRUCT, *PACDK_SENSOR_GETINFO_STRUCT;
 
-#else
 typedef struct {
 	MSDK_SCENARIO_ID_ENUM ScenarioId[2];
 	ACDK_SENSOR_INFO_STRUCT * pInfo[2];
 	ACDK_SENSOR_CONFIG_STRUCT * pConfig[2];
 } ACDK_SENSOR_GETINFO_STRUCT, *PACDK_SENSOR_GETINFO_STRUCT;
-#endif
 
 typedef struct {
 	MUINT32 SensorId;
@@ -852,15 +815,9 @@ typedef struct {
 	ACDK_SENSOR_CONFIG_STRUCT *pSensorConfigData;
 } ACDK_SENSOR_CONTROL_STRUCT;
 
-#ifdef MTK_SUB2_IMGSENSOR
-typedef struct {
-	ACDK_SENSOR_RESOLUTION_INFO_STRUCT * pResolution[3];
-} ACDK_SENSOR_PRESOLUTION_STRUCT;
-#else
 typedef struct {
 	ACDK_SENSOR_RESOLUTION_INFO_STRUCT *pResolution[2];
 } ACDK_SENSOR_PRESOLUTION_STRUCT;
-#endif
 
 
 
@@ -902,21 +859,12 @@ typedef struct {
 } stImgSensorFormat;
 
 #ifdef CONFIG_COMPAT
-#ifdef MTK_SUB2_IMGSENSOR
 /* Redifne structures for compat_ioctl */
-typedef struct {
-	MSDK_SCENARIO_ID_ENUM ScenarioId[3];
-	compat_uptr_t pInfo[3];
-	compat_uptr_t pConfig[3];
-} COMPAT_ACDK_SENSOR_GETINFO_STRUCT;
-#else
 typedef struct {
 	MSDK_SCENARIO_ID_ENUM ScenarioId[2];
 	compat_uptr_t pInfo[2];
 	compat_uptr_t pConfig[2];
 } COMPAT_ACDK_SENSOR_GETINFO_STRUCT;
-
-#endif
 
 typedef struct {
 	MUINT32 SensorId;
@@ -938,15 +886,10 @@ typedef struct {
 	compat_uptr_t pSensorConfigData;
 } COMPAT_ACDK_SENSOR_CONTROL_STRUCT;
 
-#ifdef MTK_SUB2_IMGSENSOR
-typedef struct {
-	compat_uptr_t pResolution[3];
-} COMPAT_ACDK_SENSOR_PRESOLUTION_STRUCT;
-#else
 typedef struct {
 	compat_uptr_t pResolution[2];
 } COMPAT_ACDK_SENSOR_PRESOLUTION_STRUCT;
-#endif
+
 #endif
 
 
@@ -1035,16 +978,10 @@ typedef struct {
 #define KDIMGSENSOR_DUAL_MASK_LSB 0x0000FFFF
 
 #define KDIMGSENSOR_NOSENSOR    "non_sensor"
-#ifdef MTK_SUB2_IMGSENSOR
-#define KDIMGSENSOR_MAX_INVOKE_DRIVERS  (3)
-#define KDIMGSENSOR_INVOKE_DRIVER_0     (0)
-#define KDIMGSENSOR_INVOKE_DRIVER_1     (1)
-#define KDIMGSENSOR_INVOKE_DRIVER_2     (2)
-#else
+
 #define KDIMGSENSOR_MAX_INVOKE_DRIVERS  (2)
 #define KDIMGSENSOR_INVOKE_DRIVER_0     (0)
 #define KDIMGSENSOR_INVOKE_DRIVER_1     (1)
-#endif
 
 /* For sensor synchronize the exposure time / sensor gain and isp gain. */
 typedef struct {

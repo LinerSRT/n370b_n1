@@ -1,16 +1,3 @@
-/*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
-
 #include <linux/videodev2.h>
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
@@ -109,6 +96,13 @@ static struct i2c_board_info i2c_devs2 __initdata = {I2C_BOARD_INFO(CAMERA_HW_DR
 	struct regulator *regVCAMIO = NULL;
 	struct regulator *regVCAMAF = NULL;
 	struct regulator *regSubVCAMD = NULL;
+        //add by vanzo qingzhan begin
+	struct regulator *regSubVCAMA = NULL;
+	struct regulator *regSubVCAMIO = NULL;
+	struct regulator *regMain2VCAMA = NULL;
+	struct regulator *regMain2VCAMD = NULL;
+	struct regulator *regMain2VCAMIO = NULL;
+        //add by vanzo qingzhan end 
 #endif
 
 struct device *sensor_device = NULL;
@@ -1239,9 +1233,7 @@ int kdSensorSyncFunctionPtr(void)
 
 	/* if the delay frame is 0 or 0xFF, stop to count */
 	if ((g_NewSensorExpGain.uISPGainDelayFrame != 0xFF) && (g_NewSensorExpGain.uISPGainDelayFrame != 0)) {
-		spin_lock(&kdsensor_drv_lock);
 		g_NewSensorExpGain.uISPGainDelayFrame--;
-		spin_unlock(&kdsensor_drv_lock);
 	}
 	mutex_unlock(&kdCam_Mutex);
 	return 0;
@@ -1419,6 +1411,22 @@ static inline int adopt_CAMERA_HW_CheckIsAlive(void)
 				if (ERROR_NONE != err) {
 					PK_DBG("ERROR:adopt_CAMERA_HW_CheckIsAlive(), No imgsensor alive\n");
 				}
+/* Vanzo:maxiaojun on: Mon, 26 Aug 2013 17:04:18 +0800
+ * board device name support.
+ */
+#ifdef VANZO_DEVICE_NAME_SUPPORT
+        {
+          extern void v_set_dev_name(int id, char *name);
+          if(ERROR_NONE == err){
+            if(DUAL_CAMERA_MAIN_SENSOR==g_invokeSocketIdx[i]){
+              v_set_dev_name(3, (char *)g_invokeSensorNameStr[i]);
+            }else if(DUAL_CAMERA_SUB_SENSOR==g_invokeSocketIdx[i]){
+              v_set_dev_name(4, (char *)g_invokeSensorNameStr[i]);
+            }
+          }
+        }
+#endif
+// End of Vanzo:maxiaojun
 			}
 		}
 	} else {
@@ -1426,8 +1434,7 @@ static inline int adopt_CAMERA_HW_CheckIsAlive(void)
 	}
 
 	/* reset sensor state after power off */
-	if (g_pSensorFunc)
-		err1 = g_pSensorFunc->SensorClose();
+	err1 = g_pSensorFunc->SensorClose();
 	if (ERROR_NONE != err1) {
 		PK_DBG("SensorClose\n");
 	}
@@ -1584,8 +1591,6 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 		pConfig4[i] =  &config4[i];
 		psensorResolution[i] =  &SensorResolution[i];
 		pScenarioId[i] =  &ScenarioId[i];
-		pInfo[i]->SensorHorFOV = 0;
-		pInfo[i]->SensorVerFOV = 0;
 	}
 
 	if (NULL == pSensorGetInfo) {
@@ -1700,8 +1705,6 @@ static inline int adopt_CAMERA_HW_GetInfo2(void *pBuf)
 	SensorInfo.SCAM_DataNumber                          = pInfo[IDNum]->SCAM_DataNumber;
 	SensorInfo.SCAM_DDR_En                              = pInfo[IDNum]->SCAM_DDR_En;
 	SensorInfo.SCAM_CLK_INV                             = pInfo[IDNum]->SCAM_CLK_INV;
-	SensorInfo.SensorHorFOV                            = pInfo[IDNum]->SensorHorFOV;
-	SensorInfo.SensorVerFOV                            = pInfo[IDNum]->SensorVerFOV;
 	/* TO get preview value */
 	ScenarioId[0] = ScenarioId[1] = MSDK_SCENARIO_ID_CUSTOM1;
 	g_pSensorFunc->SensorGetInfo(pScenarioId, pInfo, pConfig);
@@ -1913,21 +1916,21 @@ static inline int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	case SENSOR_FEATURE_GET_PDAF_DATA:
 	case SENSOR_FEATURE_GET_SENSOR_PDAF_CAPACITY:
 	case SENSOR_FEATURE_SET_ISO:
-	case SENSOR_FEATURE_SET_PDAF:
-		/*  */
-		if (copy_from_user((void *)pFeaturePara , (void *) pFeatureCtrl->pFeaturePara, FeatureParaLen)) {
-			kfree(pFeaturePara);
-			PK_DBG("[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
-			return -EFAULT;
-		}
-		break;
-	case SENSOR_FEATURE_SET_SENSOR_SYNC:    /* Update new sensor exposure time and gain to keep */
-		if (copy_from_user((void *)pFeaturePara , (void *) pFeatureCtrl->pFeaturePara, FeatureParaLen)) {
+    case SENSOR_FEATURE_SET_PDAF:
+        /*  */
+        if (copy_from_user((void *)pFeaturePara , (void *) pFeatureCtrl->pFeaturePara, FeatureParaLen)) {
+        kfree(pFeaturePara);
+        PK_ERR("[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
+        return -EFAULT;
+        }
+        break;
+     case SENSOR_FEATURE_SET_SENSOR_SYNC:    /* Update new sensor exposure time and gain to keep */
+        if (copy_from_user((void *)pFeaturePara , (void *) pFeatureCtrl->pFeaturePara, FeatureParaLen)) {
 	 kfree(pFeaturePara);
-			PK_DBG("[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
-			return -EFAULT;
-		}
-		/* keep the information to wait Vsync synchronize */
+         PK_ERR("[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
+         return -EFAULT;
+    }
+    /* keep the information to wait Vsync synchronize */
 		pSensorSyncInfo = (ACDK_KD_SENSOR_SYNC_STRUCT *)pFeaturePara;
 		spin_lock(&kdsensor_drv_lock);
 		g_NewSensorExpGain.u2SensorNewExpTime = pSensorSyncInfo->u2SensorNewExpTime;
@@ -1939,7 +1942,6 @@ static inline int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		g_NewSensorExpGain.uSensorExpDelayFrame = pSensorSyncInfo->uSensorExpDelayFrame;
 		g_NewSensorExpGain.uSensorGainDelayFrame = pSensorSyncInfo->uSensorGainDelayFrame;
 		g_NewSensorExpGain.uISPGainDelayFrame = pSensorSyncInfo->uISPGainDelayFrame;
-		spin_unlock(&kdsensor_drv_lock);
 		/* AE smooth not change shutter to speed up */
 		if ((0 == g_NewSensorExpGain.u2SensorNewExpTime) || (0xFFFF == g_NewSensorExpGain.u2SensorNewExpTime)) {
 			g_NewSensorExpGain.uSensorExpDelayFrame = 0xFF;
@@ -1962,9 +1964,7 @@ static inline int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
 		}
 		/* if the delay frame is 0 or 0xFF, stop to count */
 		if ((g_NewSensorExpGain.uISPGainDelayFrame != 0xFF) && (g_NewSensorExpGain.uISPGainDelayFrame != 0)) {
-			spin_lock(&kdsensor_drv_lock);
 			g_NewSensorExpGain.uISPGainDelayFrame--;
-			spin_unlock(&kdsensor_drv_lock);
 		}
 
 
@@ -1990,9 +1990,9 @@ static inline int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
 #endif
 	case SENSOR_FEATURE_SET_ESHUTTER_GAIN:
 		if (copy_from_user((void *)pFeaturePara , (void *) pFeatureCtrl->pFeaturePara, FeatureParaLen)) {
-			PK_DBG("[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
+        PK_ERR("[CAMERA_HW][pFeaturePara] ioctl copy from user failed\n");
 		kfree(pFeaturePara);
-			return -EFAULT;
+        return -EFAULT;
 		}
 		/* keep the information to wait Vsync synchronize */
 		pSensorSyncInfo = (ACDK_KD_SENSOR_SYNC_STRUCT *)pFeaturePara;
@@ -2559,6 +2559,7 @@ static inline int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
 	case SENSOR_FEATURE_GET_PDAF_INFO:
 	case SENSOR_FEATURE_GET_SENSOR_PDAF_CAPACITY:
 	case SENSOR_FEATURE_SET_ISO:
+    case SENSOR_FEATURE_SET_PDAF:
 		/*  */
 		if (copy_to_user((void __user *) pFeatureCtrl->pFeaturePara, (void *)pFeaturePara , FeatureParaLen)) {
 			kfree(pFeaturePara);
@@ -2800,7 +2801,7 @@ static inline int kdSetSensorGpio(int *pBuf)
     return ret;
 }
 
-
+// modify by vanzo qingzhan begin
 /* PMIC */
 #if !defined(CONFIG_MTK_LEGACY)
 bool Get_Cam_Regulator(void)
@@ -2839,14 +2840,29 @@ bool Get_Cam_Regulator(void)
 			    if (regVCAMA == NULL) {
 				    regVCAMA = regulator_get(sensor_device, "vcama");
 			    }
+				if (regSubVCAMA == NULL) {
+				    regSubVCAMA = regulator_get(sensor_device, "vcama_sub");
+			    }
+				if (regMain2VCAMA == NULL) {
+				    regMain2VCAMA = regulator_get(sensor_device, "vcama_main2");
+			    }
 			    if (regVCAMD == NULL) {
 				    regVCAMD = regulator_get(sensor_device, "vcamd");
 			    }
 				if (regSubVCAMD == NULL) {
 				    regSubVCAMD = regulator_get(sensor_device, "vcamd_sub");
 			    }
+				if (regMain2VCAMD == NULL) {
+				    regMain2VCAMD = regulator_get(sensor_device, "vcamd_main2");
+			    }
 			    if (regVCAMIO == NULL) {
 				    regVCAMIO = regulator_get(sensor_device, "vcamio");
+			    }
+			    if (regSubVCAMIO == NULL) {
+				    regSubVCAMIO = regulator_get(sensor_device, "vcamio_sub");
+			    }
+				if (regMain2VCAMIO == NULL) {
+				    regMain2VCAMIO = regulator_get(sensor_device, "vcamio_main2");
 			    }
 			    if (regVCAMAF == NULL) {
 				    regVCAMAF = regulator_get(sensor_device, "vcamaf");
@@ -2865,22 +2881,34 @@ bool Get_Cam_Regulator(void)
 }
 
 
-bool _hwPowerOn(KD_REGULATOR_TYPE_T type, int powerVolt)
+bool _hwPowerOn(PowerType type, int powerVolt)
 {
-    bool ret = FALSE;
+	bool ret = FALSE;
 	struct regulator *reg = NULL;
 
-	PK_DBG("[_hwPowerOn]before get, powertype:%d powerId:%d\n", type, powerVolt);
-    if (type == VCAMA) {
+    PK_DBG("[_hwPowerOn]powertype:%d powerId:%d\n", type, powerVolt);
+    if (type == AVDD) {
 	reg = regVCAMA;
-    } else if (type == VCAMD) {
+    } else if (type == DVDD) {
 	reg = regVCAMD;
-    } else if (type == VCAMIO) {
+    } else if (type == DOVDD) {
 	reg = regVCAMIO;
-    } else if (type == VCAMAF) {
+    } else if (type == AFVDD) {
 	reg = regVCAMAF;
-    } else
-	return ret;
+    }else if (type == SUB_AVDD) {
+	reg = regSubVCAMA;
+    } else if (type == SUB_DVDD) {
+	reg = regSubVCAMD;
+    } else if (type == SUB_DOVDD) {
+	reg = regSubVCAMIO;
+    } else if (type == MAIN2_AVDD) {
+	reg = regMain2VCAMA;
+    } else if (type == MAIN2_DVDD) {
+	reg = regMain2VCAMD;
+    } else if (type == MAIN2_DOVDD) {
+	reg = regMain2VCAMIO;
+    }else
+    	return ret;
 
 	if (!IS_ERR(reg)) {
 		if (regulator_set_voltage(reg , powerVolt, powerVolt) != 0) {
@@ -2900,21 +2928,34 @@ bool _hwPowerOn(KD_REGULATOR_TYPE_T type, int powerVolt)
 	return ret;
 }
 
-bool _hwPowerDown(KD_REGULATOR_TYPE_T type)
+bool _hwPowerDown(PowerType type)
 {
     bool ret = FALSE;
 	struct regulator *reg = NULL;
+	PK_DBG("[_hwPowerDown]powertype:%d\n", type);
 
-	if (type == VCAMA) {
+    if (type == AVDD) {
 	reg = regVCAMA;
-    } else if (type == VCAMD) {
+    } else if (type == DVDD) {
 	reg = regVCAMD;
-    } else if (type == VCAMIO) {
+    } else if (type == DOVDD) {
 	reg = regVCAMIO;
-    } else if (type == VCAMAF) {
+    } else if (type == AFVDD) {
 	reg = regVCAMAF;
-    } else
-	return ret;
+    }else if (type == SUB_AVDD) {
+	reg = regSubVCAMA;
+    } else if (type == SUB_DVDD) {
+	reg = regSubVCAMD;
+    } else if (type == SUB_DOVDD) {
+	reg = regSubVCAMIO;
+    } else if (type == MAIN2_AVDD) {
+	reg = regMain2VCAMA;
+    } else if (type == MAIN2_DVDD) {
+	reg = regMain2VCAMD;
+    } else if (type == MAIN2_DOVDD) {
+	reg = regMain2VCAMIO;
+    }else
+    	return ret;
 
     if (!IS_ERR(reg)) {
 	if (regulator_is_enabled(reg) != 0) {
@@ -2934,6 +2975,7 @@ bool _hwPowerDown(KD_REGULATOR_TYPE_T type)
 
 
 #endif
+// modify by vanzo qingzhan end
 
 #ifdef CONFIG_COMPAT
 

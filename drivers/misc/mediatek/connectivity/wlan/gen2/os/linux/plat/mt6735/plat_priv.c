@@ -15,29 +15,18 @@
 #include "gl_typedef.h"
 #include <mt_vcore_dvfs.h>
 
-UINT_8 u1VcoreEnb = 0;
-
 INT32 kalBoostCpu(UINT_32 core_num)
 {
 	UINT_32 cpu_num;
 
-	pr_warn("enter kalBoostCpu, core_num:%d\n", core_num);
-	cpu_num = core_num;
-	if (cpu_num != 0)
-		cpu_num += 2; /* For denali only, additional 2 cores for 5G HT40 peak throughput*/
-	if (cpu_num > 4)
+	if (core_num != 0)
+		core_num += 2; /* For denali only, additional 2 cores for HT20 peak throughput*/
+	if (core_num > 4)
 		cpu_num = 4; /* There are only 4 cores for denali */
-	if (cpu_num == 0)
-		cpu_num = 1; /* denali default core is 1*/
+	pr_warn("enter kalBoostCpu, core_num:%d\n", core_num);
 
-	hps_set_cpu_num_base(BASE_WIFI, cpu_num, 0);
-	if ((core_num >= 3) && (u1VcoreEnb == 0)) {
-		vcorefs_request_dvfs_opp(KIR_WIFI, OPPI_PERF);
-		u1VcoreEnb = 1;
-	} else if ((core_num < 3) && (u1VcoreEnb == 1)) {
-		vcorefs_request_dvfs_opp(KIR_WIFI, OPPI_UNREQ);
-		u1VcoreEnb = 0;
-	}
+	hps_set_cpu_num_base(BASE_WIFI, core_num, 0);
+
 	return 0;
 }
 
