@@ -22,7 +22,8 @@ Current status is:
 - [x] Charger
 - [x] Sound 
 - [x] ALS/PS 
-- [?] Camera (Need new libs for Nougat)
+- [x] Camera (Front cam need rotate by 180 degrees)
+- [ ] Flashlight
 - [x] Accelerometr
 - [x] Other 
 - [x] USB
